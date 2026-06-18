@@ -22,6 +22,7 @@ import {
   Rocket,
   BookOpen,
   Clapperboard,
+  ScrollText,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -453,58 +454,60 @@ export function HomeView() {
             subtitle="以下均为平台真实生成记录，非虚构案例。你也来试试，下一个爆款可能就是你的。"
           />
           <div className="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            {showcase.slice(0, 6).map((item, i) => (
-              <motion.div
-                key={item.id}
-                initial={{ opacity: 0, y: 16 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true }}
-                transition={{ duration: 0.4, delay: i * 0.06 }}
-              >
-                <Card className="group h-full overflow-hidden p-5 transition-all duration-300 hover:-translate-y-1 hover:shadow-glow-primary">
-                  <div className="mb-3 flex items-center justify-between">
-                    <Badge
-                      variant="outline"
-                      className={
-                        item.type === "SCRIPT"
-                          ? "border-rose-500/30 bg-rose-500/10 text-rose-600 dark:text-rose-400"
-                          : item.type === "TITLE"
-                          ? "border-amber-500/30 bg-amber-500/10 text-amber-600 dark:text-amber-400"
-                          : "border-fuchsia-500/30 bg-fuchsia-500/10 text-fuchsia-600 dark:text-fuchsia-400"
-                      }
-                    >
-                      {item.type === "SCRIPT"
-                        ? "解说文案"
-                        : item.type === "TITLE"
-                        ? "爆款标题"
-                        : "黄金开头"}
-                    </Badge>
-                    {item.isFavorite && (
-                      <Star className="h-3.5 w-3.5 fill-accent text-accent" />
-                    )}
-                  </div>
-                  <h3 className="mb-2 line-clamp-1 font-semibold text-foreground">
-                    《{item.movieTitle}》
-                  </h3>
-                  <p className="mb-4 line-clamp-3 min-h-[3.6rem] text-sm leading-relaxed text-muted-foreground">
-                    {item.excerpt}
-                  </p>
-                  <div className="flex items-center justify-between border-t border-border/60 pt-3">
-                    <div className="flex items-center gap-2">
-                      <div className="flex h-6 w-6 items-center justify-center rounded-full bg-gradient-to-br from-primary to-accent text-[10px] font-bold text-primary-foreground">
-                        {item.author.slice(0, 1)}
+            {showcase.slice(0, 6).map((item, i) => {
+              const typeMeta = item.type === "SCRIPT"
+                ? { label: "解说文案", icon: ScrollText, color: "from-rose-500 to-pink-500", badge: "border-rose-500/30 bg-rose-500/10 text-rose-600 dark:text-rose-400" }
+                : item.type === "TITLE"
+                ? { label: "爆款标题", icon: TypeIcon, color: "from-amber-500 to-orange-500", badge: "border-amber-500/30 bg-amber-500/10 text-amber-600 dark:text-amber-400" }
+                : { label: "黄金开头", icon: Zap, color: "from-fuchsia-500 to-rose-500", badge: "border-fuchsia-500/30 bg-fuchsia-500/10 text-fuchsia-600 dark:text-fuchsia-400" };
+              return (
+                <motion.div
+                  key={item.id}
+                  initial={{ opacity: 0, y: 16 }}
+                  whileInView={{ opacity: 1, y: 0 }}
+                  viewport={{ once: true }}
+                  transition={{ duration: 0.4, delay: i * 0.06 }}
+                >
+                  <Card className="group relative h-full overflow-hidden p-0 transition-all duration-300 hover:-translate-y-1 hover:shadow-glow-primary">
+                    {/* 顶部渐变色条 */}
+                    <div className={cn("h-1 w-full bg-gradient-to-r", typeMeta.color)} />
+                    <div className="p-5">
+                      <div className="mb-3 flex items-center justify-between">
+                        <Badge variant="outline" className={cn("gap-1", typeMeta.badge)}>
+                          <typeMeta.icon className="h-3 w-3" />
+                          {typeMeta.label}
+                        </Badge>
+                        {item.isFavorite && (
+                          <span className="flex items-center gap-1 text-[10px] text-accent">
+                            <Star className="h-3 w-3 fill-accent text-accent" />
+                            已收藏
+                          </span>
+                        )}
                       </div>
-                      <span className="text-xs text-muted-foreground">
-                        {item.author}
-                      </span>
+                      <h3 className="mb-2 line-clamp-1 font-semibold text-foreground">
+                        《{item.movieTitle}》
+                      </h3>
+                      <p className="mb-4 line-clamp-3 min-h-[3.6rem] text-sm leading-relaxed text-muted-foreground">
+                        {item.excerpt}
+                      </p>
+                      <div className="flex items-center justify-between border-t border-border/60 pt-3">
+                        <div className="flex items-center gap-2">
+                          <div className={cn("flex h-6 w-6 items-center justify-center rounded-full bg-gradient-to-br text-[10px] font-bold text-primary-foreground", typeMeta.color)}>
+                            {item.author.slice(0, 1)}
+                          </div>
+                          <span className="text-xs text-muted-foreground">
+                            {item.author}
+                          </span>
+                        </div>
+                        <span className="text-[11px] text-muted-foreground/70">
+                          {formatRelativeTime(item.createdAt)}
+                        </span>
+                      </div>
                     </div>
-                    <span className="text-[11px] text-muted-foreground/70">
-                      {formatRelativeTime(item.createdAt)}
-                    </span>
-                  </div>
-                </Card>
-              </motion.div>
-            ))}
+                  </Card>
+                </motion.div>
+              );
+            })}
           </div>
           <div className="mt-8 text-center">
             <Button

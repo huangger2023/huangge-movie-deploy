@@ -460,13 +460,26 @@ export function AdminView() {
           ))}
         </motion.div>
 
-        {/* Table */}
+        {/* Tabs: 课程管理 / 数据看板 */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.4, delay: 0.2 }}
           className="mt-6"
         >
+          <Tabs defaultValue="courses" className="w-full">
+            <TabsList className="grid w-full max-w-md grid-cols-2">
+              <TabsTrigger value="courses" className="gap-1.5">
+                <BookOpen className="h-3.5 w-3.5" />
+                课程管理
+              </TabsTrigger>
+              <TabsTrigger value="dashboard" className="gap-1.5">
+                <BarChart3 className="h-3.5 w-3.5" />
+                数据看板
+              </TabsTrigger>
+            </TabsList>
+
+            <TabsContent value="courses" className="mt-4">
           <Card className="p-0">
             <CardHeader className="border-b px-5 py-4">
               <CardTitle className="text-base">课程列表</CardTitle>
@@ -612,6 +625,18 @@ export function AdminView() {
               )}
             </CardContent>
           </Card>
+            </TabsContent>
+
+            {/* 数据看板 Tab */}
+            <TabsContent value="dashboard" className="mt-4">
+              <DashboardTab
+                courses={courses}
+                totalStudents={totalStudents}
+                totalRevenue={totalRevenue}
+                loading={loading}
+              />
+            </TabsContent>
+          </Tabs>
         </motion.div>
       </div>
 
@@ -1347,5 +1372,301 @@ function LessonForm({
         {saving ? "保存中…" : lesson ? "保存修改" : "添加课时"}
       </Button>
     </motion.div>
+  );
+}
+
+/* ----------------------- 数据看板组件 ----------------------- */
+
+function DashboardTab({
+  courses,
+  totalStudents,
+  totalRevenue,
+  loading,
+}: {
+  courses: AdminCourse[];
+  totalStudents: number;
+  totalRevenue: number;
+  loading: boolean;
+}) {
+  // 计算各项指标
+  const totalLessons = courses.reduce((s, c) => s + (c._count?.lessons || 0), 0);
+  const freeCount = courses.filter((c) => c.isFree).length;
+  const paidCount = courses.length - freeCount;
+  const featuredCount = courses.filter((c) => c.isFeatured).length;
+  const avgPrice = paidCount > 0
+    ? Math.round(courses.filter((c) => !c.isFree).reduce((s, c) => s + c.price, 0) / paidCount)
+    : 0;
+  const avgStudents = courses.length > 0 ? Math.round(totalStudents / courses.length) : 0;
+
+  // 按分类分布
+  const byCategory = React.useMemo(() => {
+    const map = new Map<string, { count: number; students: number; revenue: number }>();
+    for (const c of courses) {
+      const k = c.category || "未分类";
+      const cur = map.get(k) || { count: 0, students: 0, revenue: 0 };
+      cur.count += 1;
+      cur.students += c.studentsCount || 0;
+      cur.revenue += c.isFree ? 0 : (c.price || 0) * (c.studentsCount || 0);
+      map.set(k, cur);
+    }
+    return Array.from(map.entries()).sort((a, b) => b[1].students - a[1].students);
+  }, [courses]);
+
+  // 按难度分布
+  const byLevel = React.useMemo(() => {
+    const map = new Map<string, number>();
+    for (const c of courses) {
+      const k = c.level || "未设";
+      map.set(k, (map.get(k) || 0) + 1);
+    }
+    return Array.from(map.entries());
+  }, [courses]);
+
+  // 学员 Top 5 课程
+  const topCourses = React.useMemo(() => {
+    return [...courses].sort((a, b) => b.studentsCount - a.studentsCount).slice(0, 5);
+  }, [courses]);
+
+  // 收入 Top 5 课程
+  const topRevenue = React.useMemo(() => {
+    return [...courses]
+      .map((c) => ({ ...c, revenue: c.isFree ? 0 : (c.price || 0) * (c.studentsCount || 0) }))
+      .sort((a, b) => b.revenue - a.revenue)
+      .slice(0, 5);
+  }, [courses]);
+
+  if (loading) {
+    return (
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        {Array.from({ length: 8 }).map((_, i) => (
+          <div key={i} className="h-28 animate-pulse rounded-xl bg-muted/40" />
+        ))}
+      </div>
+    );
+  }
+
+  const metrics = [
+    {
+      icon: BookOpen,
+      label: "课程总数",
+      value: String(courses.length),
+      sub: `${freeCount} 免费 / ${paidCount} 付费`,
+      tint: "from-rose-500/15 to-rose-500/5 text-rose-500",
+    },
+    {
+      icon: Layers,
+      label: "课时总数",
+      value: String(totalLessons),
+      sub: `平均 ${courses.length > 0 ? Math.round(totalLessons / courses.length) : 0} 节/课`,
+      tint: "from-violet-500/15 to-violet-500/5 text-violet-500",
+    },
+    {
+      icon: Users,
+      label: "累计学员",
+      value: totalStudents.toLocaleString(),
+      sub: `平均 ${avgStudents}/课`,
+      tint: "from-amber-500/15 to-amber-500/5 text-amber-500",
+    },
+    {
+      icon: Wallet,
+      label: "收入估算",
+      value: `¥${totalRevenue.toLocaleString()}`,
+      sub: `均价 ¥${avgPrice}`,
+      tint: "from-emerald-500/15 to-emerald-500/5 text-emerald-500",
+    },
+  ];
+
+  const maxStudents = topCourses[0]?.studentsCount || 1;
+  const maxRevenue = topRevenue[0]?.revenue || 1;
+  const maxCatStudents = byCategory[0]?.[1].students || 1;
+
+  return (
+    <div className="space-y-5">
+      {/* 核心指标 4 卡 */}
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        {metrics.map((m, i) => (
+          <motion.div
+            key={m.label}
+            initial={{ opacity: 0, y: 12 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: i * 0.08 }}
+          >
+            <Card className={cn("relative overflow-hidden p-5")}>
+              <div className={cn("absolute -right-4 -top-4 h-20 w-20 rounded-full bg-gradient-to-br opacity-50 blur-2xl", m.tint)} />
+              <div className="relative flex items-center gap-3">
+                <div className={cn("flex h-10 w-10 items-center justify-center rounded-lg bg-gradient-to-br", m.tint)}>
+                  <m.icon className="h-5 w-5" />
+                </div>
+                <div className="min-w-0">
+                  <div className="text-2xl font-bold tracking-tight">{m.value}</div>
+                  <div className="text-xs text-muted-foreground">{m.label}</div>
+                </div>
+              </div>
+              <div className="relative mt-3 text-[11px] text-muted-foreground">
+                {m.sub}
+              </div>
+            </Card>
+          </motion.div>
+        ))}
+      </div>
+
+      <div className="grid gap-5 lg:grid-cols-2">
+        {/* 学员 Top 5 */}
+        <Card className="p-5">
+          <div className="mb-4 flex items-center justify-between">
+            <h3 className="flex items-center gap-2 text-sm font-semibold">
+              <TrendingUp className="h-4 w-4 text-primary" />
+              学员数 Top 5
+            </h3>
+            <span className="text-[11px] text-muted-foreground">按报名人数排序</span>
+          </div>
+          <div className="space-y-3">
+            {topCourses.map((c, i) => (
+              <div key={c.id} className="space-y-1.5">
+                <div className="flex items-center justify-between gap-2 text-xs">
+                  <span className="flex min-w-0 items-center gap-1.5">
+                    <span className={cn(
+                      "flex h-5 w-5 shrink-0 items-center justify-center rounded-md text-[10px] font-bold",
+                      i === 0 ? "bg-amber-500/15 text-amber-600 dark:text-amber-400" :
+                      i === 1 ? "bg-slate-400/15 text-slate-500" :
+                      i === 2 ? "bg-orange-700/15 text-orange-700 dark:text-orange-400" :
+                      "bg-muted text-muted-foreground"
+                    )}>
+                      {i + 1}
+                    </span>
+                    <span className="truncate font-medium">{c.title}</span>
+                  </span>
+                  <span className="shrink-0 font-semibold text-primary">
+                    {c.studentsCount.toLocaleString()}
+                  </span>
+                </div>
+                <div className="h-1.5 overflow-hidden rounded-full bg-muted">
+                  <motion.div
+                    initial={{ width: 0 }}
+                    animate={{ width: `${(c.studentsCount / maxStudents) * 100}%` }}
+                    transition={{ duration: 0.6, delay: i * 0.1 }}
+                    className="h-full rounded-full bg-gradient-to-r from-primary to-accent"
+                  />
+                </div>
+              </div>
+            ))}
+          </div>
+        </Card>
+
+        {/* 收入 Top 5 */}
+        <Card className="p-5">
+          <div className="mb-4 flex items-center justify-between">
+            <h3 className="flex items-center gap-2 text-sm font-semibold">
+              <Wallet className="h-4 w-4 text-emerald-500" />
+              收入贡献 Top 5
+            </h3>
+            <span className="text-[11px] text-muted-foreground">价格 × 学员数</span>
+          </div>
+          <div className="space-y-3">
+            {topRevenue.map((c, i) => (
+              <div key={c.id} className="space-y-1.5">
+                <div className="flex items-center justify-between gap-2 text-xs">
+                  <span className="flex min-w-0 items-center gap-1.5">
+                    <span className={cn(
+                      "flex h-5 w-5 shrink-0 items-center justify-center rounded-md text-[10px] font-bold",
+                      i === 0 ? "bg-amber-500/15 text-amber-600 dark:text-amber-400" :
+                      i === 1 ? "bg-slate-400/15 text-slate-500" :
+                      i === 2 ? "bg-orange-700/15 text-orange-700 dark:text-orange-400" :
+                      "bg-muted text-muted-foreground"
+                    )}>
+                      {i + 1}
+                    </span>
+                    <span className="truncate font-medium">{c.title}</span>
+                  </span>
+                  <span className="shrink-0 font-semibold text-emerald-600 dark:text-emerald-400">
+                    ¥{c.revenue.toLocaleString()}
+                  </span>
+                </div>
+                <div className="h-1.5 overflow-hidden rounded-full bg-muted">
+                  <motion.div
+                    initial={{ width: 0 }}
+                    animate={{ width: `${(c.revenue / maxRevenue) * 100}%` }}
+                    transition={{ duration: 0.6, delay: i * 0.1 }}
+                    className="h-full rounded-full bg-gradient-to-r from-emerald-500 to-teal-500"
+                  />
+                </div>
+              </div>
+            ))}
+          </div>
+        </Card>
+      </div>
+
+      <div className="grid gap-5 lg:grid-cols-2">
+        {/* 分类分布 */}
+        <Card className="p-5">
+          <div className="mb-4 flex items-center justify-between">
+            <h3 className="flex items-center gap-2 text-sm font-semibold">
+              <GraduationCap className="h-4 w-4 text-accent" />
+              分类分布
+            </h3>
+            <span className="text-[11px] text-muted-foreground">{byCategory.length} 个分类</span>
+          </div>
+          <div className="space-y-3">
+            {byCategory.map(([cat, data], i) => (
+              <div key={cat} className="space-y-1.5">
+                <div className="flex items-center justify-between gap-2 text-xs">
+                  <span className="font-medium">{cat}</span>
+                  <div className="flex items-center gap-3 text-muted-foreground">
+                    <span>{data.count} 课</span>
+                    <span className="font-semibold text-foreground">{data.students.toLocaleString()} 学员</span>
+                    <span className="text-emerald-600 dark:text-emerald-400">¥{data.revenue.toLocaleString()}</span>
+                  </div>
+                </div>
+                <div className="h-1.5 overflow-hidden rounded-full bg-muted">
+                  <motion.div
+                    initial={{ width: 0 }}
+                    animate={{ width: `${(data.students / maxCatStudents) * 100}%` }}
+                    transition={{ duration: 0.6, delay: i * 0.08 }}
+                    className="h-full rounded-full bg-gradient-to-r from-accent to-primary"
+                  />
+                </div>
+              </div>
+            ))}
+          </div>
+        </Card>
+
+        {/* 难度分布 + 精选统计 */}
+        <Card className="p-5">
+          <div className="mb-4 flex items-center justify-between">
+            <h3 className="flex items-center gap-2 text-sm font-semibold">
+              <Activity className="h-4 w-4 text-violet-500" />
+              难度 & 精选统计
+            </h3>
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            {byLevel.map(([level, count]) => (
+              <div key={level} className="rounded-lg border border-border/60 bg-muted/30 p-3">
+                <div className="text-[11px] text-muted-foreground">{level}</div>
+                <div className="mt-1 text-xl font-bold">{count}</div>
+                <div className="text-[10px] text-muted-foreground">门课程</div>
+              </div>
+            ))}
+          </div>
+          <div className="mt-4 grid grid-cols-2 gap-3">
+            <div className="rounded-lg border border-amber-500/20 bg-amber-500/5 p-3">
+              <div className="flex items-center gap-1.5 text-[11px] text-amber-600 dark:text-amber-400">
+                <Crown className="h-3 w-3" />
+                精选课程
+              </div>
+              <div className="mt-1 text-xl font-bold text-amber-600 dark:text-amber-400">{featuredCount}</div>
+              <div className="text-[10px] text-muted-foreground">门已精选</div>
+            </div>
+            <div className="rounded-lg border border-emerald-500/20 bg-emerald-500/5 p-3">
+              <div className="flex items-center gap-1.5 text-[11px] text-emerald-600 dark:text-emerald-400">
+                <Star className="h-3 w-3" />
+                免费课程
+              </div>
+              <div className="mt-1 text-xl font-bold text-emerald-600 dark:text-emerald-400">{freeCount}</div>
+              <div className="text-[10px] text-muted-foreground">门免费</div>
+            </div>
+          </div>
+        </Card>
+      </div>
+    </div>
   );
 }

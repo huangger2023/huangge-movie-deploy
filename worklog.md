@@ -739,3 +739,84 @@ Agent: 主控 Agent (Z.ai Code) — cron 触发的 webDevReview
 - 学员：demo@yingshu.com / 123456
 - dev server：http://localhost:3000，lint 0 errors
 - 定时任务：webDevReview 每15分钟自动巡检（job_id: 213591）
+
+---
+Task ID: 15 (cron 巡检轮 · 课时进度跟踪 + 数据看板 + 展示墙增强)
+Agent: 主控 Agent (Z.ai Code) — cron 触发的 webDevReview
+
+## 项目当前状态判断
+项目稳定。dev log 健康，lint 0 errors。所有核心流程可用。本轮重点补齐学习进度跟踪、管理后台数据可视化、首页展示墙视觉细节。
+
+## 本轮工作
+
+### QA 测试 (agent-browser + curl)
+- 首页/课程中心/课程详情/AI文案/创作工具箱/创作工作台/我的学习/管理后台 全部正常，无 console error
+- demo 登录正常，已报名破冰营课程
+- curl 验证 /api/stats 200：6 课程 / 31 课时 / 21462 学员 / 14 文案
+- 发现课程详情页没有「标记课时已学」功能，学员无法跟踪学习进度
+
+### 新需求1：课程详情页「学习进度跟踪」（核心）
+**痛点**：学员报名课程后，无法标记哪些课时已学，进度条只是装饰没有实际跟踪。
+**实现** (course-detail-view.tsx)：
+- 新增 `completedLessons` state（Set<string>）+ `markingLessonId` loading state
+- localStorage 持久化：`course-progress-{courseId}` 存储已完成课时 id 数组
+- `syncProgress` callback：把完成比例同步到后端 enrollment.progress（PATCH /api/enrollments）
+- `toggleLessonComplete` 函数：切换完成状态 + 持久化 + 同步后端
+- LessonRow 组件增强：
+  - 新 props：completed / marking / onToggleComplete / totalLessons / completedCount
+  - 完成状态视觉：图标变 CheckCircle2（绿色）/ 标题加 line-through / 背景淡绿 / 「已学」badge
+  - 展开内容顶部加进度提示条：「课程进度：X / Y 节已完成  Z%」
+  - 底部加「标记本节已学」按钮（emerald 渐变）/ 完成后变「标记为未学」+「✓ 已完成，进度已同步」
+- 新增 BookCheck / CircleCheck / Circle 图标导入
+
+### 新需求2：管理后台「数据看板」Tab（核心）
+**痛点**：原 admin 只显示 3 个统计卡（课程数/学员数/收入），缺少分类分布、Top 课程、难度分布等深度分析。
+**实现** (admin-view.tsx)：
+- 引入 Tabs 组件：课程管理 / 数据看板 两个 Tab
+- 新增 `DashboardTab` 组件（约 200 行）：
+  - **4 张核心指标卡**：课程总数（含免费/付费拆分）/ 课时总数（含平均节/课）/ 累计学员（含平均/课）/ 收入估算（含均价）
+    - 每卡右上角渐变色 blur 光斑装饰
+  - **学员数 Top 5**：横向条形图（渐变填充），排名 1/2/3 用金银铜色
+  - **收入贡献 Top 5**：横向条形图（emerald 渐变），金额标注
+  - **分类分布**：按学员数排序，显示「N 课 / N 学员 / ¥收入」+ 渐变条
+  - **难度 & 精选统计**：难度网格卡 + 精选课程数 + 免费课程数
+  - 所有条形图用 framer-motion 动画从 0 增长到目标宽度
+- 数据派生用 useMemo：byCategory / byLevel / topCourses / topRevenue
+
+### 新需求3：首页学员展示墙样式增强
+**痛点**：原展示卡类型 badge 单调，头像颜色统一，缺少视觉层次。
+**实现** (home-view.tsx)：
+- 类型化视觉系统 `typeMeta`：
+  - SCRIPT 解说文案：rose 渐变 + ScrollText 图标
+  - TITLE 爆款标题：amber 渐变 + Type 图标
+  - HOOK 黄金开头：fuchsia 渐变 + Zap 图标
+- 卡片顶部加渐变色条（h-1 bg-gradient-to-r）
+- Badge 加类型图标
+- 头像改用类型对应渐变色（从统一 primary/accent → 类型色）
+- 已收藏从单纯 Star 图标改为「★ 已收藏」文字+图标组合
+- 新增 ScrollText 图标导入
+
+## 验证结果 (agent-browser + curl)
+- **课时进度跟踪**：demo 用户 → 破冰营 → 展开第1课 → 点「标记本节已学」→ PATCH /api/enrollments 200 → 按钮变「标记为未学」+「已学」badge 显示 → 刷新页面 → 状态保持（localStorage 持久化）✓
+- **数据看板**：admin 后台 → 点「数据看板」tab → 显示 4 张核心指标卡（6 课程/31 课时/21462 学员/¥6,835,738 收入）+ 学员 Top 5（破冰营 8,642 第一）+ 收入 Top 5（AI大师课 ¥2,275,440 第一）+ 分类分布（5 个分类）+ 难度统计（4 中级/1 高级/1 初级）+ 精选 4 门 ✓
+- **展示墙增强**：首页 → 滚动到学员创作 → 6 张卡片显示顶部渐变色条（rose/amber/fuchsia 三色对应类型）+ 类型图标 badge + 渐变头像 ✓
+- **lint 0 errors**
+
+## 未解决问题/风险
+- 课时进度依赖 localStorage，换设备会丢失（enrollment.progress 在后端有保存，但具体哪些课时完成只在本地）
+- 联网搜索 12.6s 仍偏慢
+- 数据看板的 Top 5 等统计基于 courses 表的 studentsCount（seed 值），非真实报名实时统计
+
+## 建议下一阶段优先事项
+1. 课时完成记录持久化到后端（新建 LessonCompletion 表）
+2. 联网搜索改 SSE 流式返回
+3. 工作台编辑器加「从其他项目导入」功能
+4. 管理后台加「学员管理」+「订单/收入看板」
+5. 课程详情页加视频播放器优化
+6. 课时编辑器加 Markdown 预览
+
+## 测试账号
+- 管理员：admin@yingshu.com / admin123
+- 学员：demo@yingshu.com / 123456
+- dev server：http://localhost:3000，lint 0 errors
+- 定时任务：webDevReview 每15分钟自动巡检（job_id: 213591）
