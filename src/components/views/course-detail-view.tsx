@@ -25,6 +25,7 @@ import {
   Send,
   MessageSquare,
   X,
+  Trash2,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -32,6 +33,17 @@ import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Textarea } from "@/components/ui/textarea";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 import { useAppStore } from "@/lib/store";
 import { cn } from "@/lib/utils";
 
@@ -732,28 +744,99 @@ function LessonAssistant({
     }
   };
 
+  const [clearing, setClearing] = React.useState(false);
+  const handleClearHistory = async () => {
+    if (!user || !lesson.id) return;
+    setClearing(true);
+    try {
+      const res = await fetch(
+        `/api/ai/assistant?lessonId=${lesson.id}`,
+        { method: "DELETE" }
+      );
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "清除失败");
+      setMessages([]);
+      toast.success(
+        data.deleted > 0
+          ? `已清除 ${data.deleted} 条历史对话`
+          : "本课时暂无历史对话"
+      );
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "清除历史失败");
+    } finally {
+      setClearing(false);
+    }
+  };
+
   return (
     <div className="mt-4 rounded-xl border border-primary/20 bg-gradient-to-br from-primary/[0.04] to-accent/[0.04] p-3">
       {/* 助教标题栏 */}
-      <button
-        onClick={() => setOpen((v) => !v)}
-        className="flex w-full items-center gap-2 text-left"
-      >
-        <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-gradient-to-br from-primary to-accent">
-          <Bot className="h-4 w-4 text-primary-foreground" />
-        </div>
-        <div className="flex-1">
-          <p className="text-xs font-semibold text-foreground">AI 课程助教</p>
-          <p className="text-[10px] text-muted-foreground">
-            基于本节内容，有疑问随时问
-          </p>
-        </div>
-        {open ? (
-          <X className="h-4 w-4 text-muted-foreground" />
-        ) : (
-          <MessageSquare className="h-4 w-4 text-muted-foreground" />
+      <div className="flex w-full items-center gap-2">
+        <button
+          onClick={() => setOpen((v) => !v)}
+          className="flex flex-1 items-center gap-2 text-left"
+        >
+          <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-gradient-to-br from-primary to-accent">
+            <Bot className="h-4 w-4 text-primary-foreground" />
+          </div>
+          <div className="flex-1">
+            <p className="text-xs font-semibold text-foreground">AI 课程助教</p>
+            <p className="text-[10px] text-muted-foreground">
+              基于本节内容，有疑问随时问
+            </p>
+          </div>
+          {open ? (
+            <X className="h-4 w-4 text-muted-foreground" />
+          ) : (
+            <MessageSquare className="h-4 w-4 text-muted-foreground" />
+          )}
+        </button>
+        {open && messages.length > 0 && (
+          <AlertDialog>
+            <AlertDialogTrigger asChild>
+              <Button
+                size="sm"
+                variant="ghost"
+                disabled={clearing}
+                className="h-7 gap-1 px-2 text-[11px] text-muted-foreground hover:text-destructive"
+                title="清空本课时的对话历史"
+              >
+                {clearing ? (
+                  <Loader2 className="h-3 w-3 animate-spin" />
+                ) : (
+                  <Trash2 className="h-3 w-3" />
+                )}
+                <span className="hidden sm:inline">
+                  {clearing ? "清除中" : "清除历史"}
+                </span>
+              </Button>
+            </AlertDialogTrigger>
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>清除本课时的对话历史？</AlertDialogTitle>
+                <AlertDialogDescription>
+                  将永久删除你在《{lesson.title}》与 AI 助教的所有对话（共 {messages.length} 条），此操作不可撤销。
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel disabled={clearing}>取消</AlertDialogCancel>
+                <AlertDialogAction
+                  onClick={handleClearHistory}
+                  disabled={clearing}
+                  className="gap-1.5 bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                >
+                  {clearing ? (
+                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                  ) : (
+                    <Trash2 className="h-3.5 w-3.5" />
+                  )}
+                  确认清除
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
         )}
-      </button>
+      </div>
 
       {open && (
         <motion.div

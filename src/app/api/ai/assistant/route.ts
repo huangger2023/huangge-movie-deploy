@@ -121,3 +121,25 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: "获取历史失败" }, { status: 500 });
   }
 }
+
+/** 清除某课时的对话历史 */
+export async function DELETE(req: NextRequest) {
+  try {
+    const user = await getCurrentUser();
+    if (!user) {
+      return NextResponse.json({ error: "请先登录" }, { status: 401 });
+    }
+    const { searchParams } = new URL(req.url);
+    const lessonId = searchParams.get("lessonId");
+    if (!lessonId) {
+      return NextResponse.json({ error: "缺少 lessonId" }, { status: 400 });
+    }
+    const result = await db.chatMessage.deleteMany({
+      where: { userId: user.id, lessonId },
+    });
+    return NextResponse.json({ deleted: result.count });
+  } catch (e) {
+    console.error("assistant clear error", e);
+    return NextResponse.json({ error: "清除历史失败" }, { status: 500 });
+  }
+}

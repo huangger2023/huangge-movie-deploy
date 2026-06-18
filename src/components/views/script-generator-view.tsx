@@ -34,6 +34,7 @@ import {
   Clock,
   Camera,
   ScrollText,
+  FolderKanban,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -58,6 +59,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { useAppStore } from "@/lib/store";
+import { SaveToWorkspaceDialog, type WorkspaceField } from "@/components/site/save-to-workspace-dialog";
 import { cn } from "@/lib/utils";
 
 const GENRES = ["剧情", "悬疑", "科幻", "爱情", "动作", "恐怖", "喜剧", "犯罪", "动画", "纪录片"];
@@ -172,6 +174,28 @@ export function ScriptGeneratorView() {
   const [plotForm, setPlotForm] = React.useState({ movieTitle: "", content: "" });
   const [plotSaving, setPlotSaving] = React.useState(false);
   const [plotExpanded, setPlotExpanded] = React.useState(false);
+
+  // 存入工作台 dialog
+  const [saveWsOpen, setSaveWsOpen] = React.useState(false);
+  const [saveWsField, setSaveWsField] = React.useState<WorkspaceField>("script");
+  const [saveWsValue, setSaveWsValue] = React.useState("");
+
+  const openSaveToWorkspace = (field: WorkspaceField, value: string) => {
+    if (!user) {
+      toast.info("请先登录后再存入工作台", {
+        description: "登录后可统一管理每部电影的创作进度",
+        action: { label: "去登录", onClick: () => setView("auth") },
+      });
+      return;
+    }
+    if (!value.trim()) {
+      toast.error("没有内容可保存");
+      return;
+    }
+    setSaveWsField(field);
+    setSaveWsValue(value);
+    setSaveWsOpen(true);
+  };
 
   React.useEffect(() => {
     return () => {
@@ -659,6 +683,7 @@ export function ScriptGeneratorView() {
                   onFavorite={handleFavorite}
                   onRegenerate={handleGenerate}
                   onTTS={handleTTS}
+                  onSaveToWorkspace={openSaveToWorkspace}
                 />
               ) : (
                 <EmptyState onPick={fillSample} />
@@ -709,6 +734,17 @@ export function ScriptGeneratorView() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* 存入创作工作台 Dialog */}
+      <SaveToWorkspaceDialog
+        open={saveWsOpen}
+        onOpenChange={setSaveWsOpen}
+        field={saveWsField}
+        value={saveWsValue}
+        defaultMovieTitle={form.movieTitle.trim()}
+        defaultGenre={form.genre}
+        onSaved={() => setView("workspace")}
+      />
     </div>
   );
 }
@@ -1384,6 +1420,7 @@ interface ResultPanelProps {
   onFavorite: () => void;
   onRegenerate: () => void;
   onTTS: () => void;
+  onSaveToWorkspace: (field: WorkspaceField, value: string) => void;
 }
 
 type ResultViewMode = "script" | "storyboard";
@@ -1399,6 +1436,7 @@ function ResultPanel({
   onFavorite,
   onRegenerate,
   onTTS,
+  onSaveToWorkspace,
 }: ResultPanelProps) {
   const isUnverified = result.includes("剧情未经校验");
   const [viewMode, setViewMode] = React.useState<ResultViewMode>("script");
@@ -1431,6 +1469,21 @@ function ResultPanel({
             分镜表
           </Button>
         </div>
+        <Button
+          size="sm"
+          variant="ghost"
+          className="h-8 gap-1.5 px-2.5 text-primary hover:bg-primary/10 hover:text-primary"
+          onClick={() =>
+            onSaveToWorkspace(
+              viewMode === "storyboard" ? "storyboard" : "script",
+              viewMode === "storyboard" ? exportStoryboardMarkdown(result) : result
+            )
+          }
+          title="存入创作工作台，统一管理每部电影的创作进度"
+        >
+          <FolderKanban className="h-3.5 w-3.5" />
+          <span className="hidden sm:inline">存入工作台</span>
+        </Button>
         <Button size="sm" variant="ghost" className="h-8 gap-1.5 px-2.5" onClick={onCopy}>
           <Copy className="h-3.5 w-3.5" />
           <span className="hidden sm:inline">复制</span>
@@ -1567,6 +1620,26 @@ const SCENE_STYLE: Record<string, string> = {
   片尾标签: "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20",
 };
 
+/** 把文案转换为分镜表 Markdown（用于导出 / 存入工作台） */
+function exportStoryboardMarkdown(content: string): string {
+  const shots = parseShots(content);
+  const totalDuration = shots.reduce((s, sh) => s + sh.estDuration, 0);
+  const totalMin = Math.floor(totalDuration / 60);
+  const totalSec = totalDuration % 60;
+  return [
+    `# 分镜表 · 共 ${shots.length} 个镜头 · 预计时长 ${totalMin > 0 ? totalMin + "分" : ""}${totalSec}秒`,
+    "",
+    "| 镜号 | 章节 | 画面类型 | 旁白文案 | 预计时长 |",
+    "| --- | --- | --- | --- | --- |",
+    ...shots.map(
+      (s) =>
+        `| ${s.id} | ${s.section} | ${s.sceneType} | ${s.narration.replace(/\|/g, "\\|")} | ${s.estDuration}s |`
+    ),
+    "",
+    `> 由影述学院 AI 文案生成器自动拆分，可导入剪映/PR 对应剪辑。`,
+  ].join("\n");
+}
+
 function StoryboardTable({ content }: { content: string }) {
   const shots = React.useMemo(() => parseShots(content), [content]);
   const totalDuration = shots.reduce((s, sh) => s + sh.estDuration, 0);
@@ -1574,18 +1647,7 @@ function StoryboardTable({ content }: { content: string }) {
   const totalSec = totalDuration % 60;
 
   const handleExport = () => {
-    const md = [
-      `# 分镜表 · 共 ${shots.length} 个镜头 · 预计时长 ${totalMin > 0 ? totalMin + "分" : ""}${totalSec}秒`,
-      "",
-      "| 镜号 | 章节 | 画面类型 | 旁白文案 | 预计时长 |",
-      "| --- | --- | --- | --- | --- |",
-      ...shots.map(
-        (s) =>
-          `| ${s.id} | ${s.section} | ${s.sceneType} | ${s.narration.replace(/\|/g, "\\|")} | ${s.estDuration}s |`
-      ),
-      "",
-      `> 由影述学院 AI 文案生成器自动拆分，可导入剪映/PR 对应剪辑。`,
-    ].join("\n");
+    const md = exportStoryboardMarkdown(content);
     const blob = new Blob([md], { type: "text/markdown;charset=utf-8" });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");

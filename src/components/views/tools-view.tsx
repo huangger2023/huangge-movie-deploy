@@ -41,6 +41,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { useAppStore } from "@/lib/store";
+import { SaveToWorkspaceButton } from "@/components/site/save-to-workspace-dialog";
 import { cn } from "@/lib/utils";
 
 /**
@@ -679,7 +680,16 @@ function TitleTool() {
                   {items.length} 条
                 </Badge>
               </div>
-              <CopyButton text={output} label="整体复制" />
+              <div className="flex items-center gap-1.5">
+                <SaveToWorkspaceButton
+                  field="titles"
+                  value={output}
+                  defaultMovieTitle={movieTitle.trim()}
+                  defaultGenre={genre}
+                  label="存入工作台"
+                />
+                <CopyButton text={output} label="整体复制" />
+              </div>
             </div>
             <div className="max-h-[640px] overflow-y-auto scrollbar-thin p-3">
               <ul className="space-y-2">
@@ -856,21 +866,36 @@ function HookTool() {
         loading ? (
           <GeneratingSkeleton rows={count} />
         ) : items.length > 0 ? (
-          <div className="max-h-[720px] space-y-3 overflow-y-auto scrollbar-thin pr-1">
-            {items.map((item, i) => (
-              <Card
-                key={i}
-                className="group flex items-start gap-3 p-4 transition-all hover:shadow-glow-primary"
-              >
-                <Badge className="mt-0.5 h-7 min-w-7 shrink-0 justify-center rounded-lg bg-gradient-to-br from-fuchsia-500 to-rose-500 px-2 text-xs text-white">
-                  {i + 1}
-                </Badge>
-                <p className="flex-1 whitespace-pre-wrap break-words text-sm leading-relaxed">
-                  {item}
-                </p>
-                <CopyButton text={item} />
-              </Card>
-            ))}
+          <div>
+            <div className="mb-2 flex items-center justify-end gap-1.5">
+              <SaveToWorkspaceButton
+                field="hooks"
+                value={items.map((it, i) => `${i + 1}. ${it}`).join("\n")}
+                defaultMovieTitle={movieTitle.trim()}
+                defaultGenre={genre}
+                label="存入工作台"
+              />
+              <CopyButton
+                text={items.map((it, i) => `${i + 1}. ${it}`).join("\n")}
+                label="整体复制"
+              />
+            </div>
+            <div className="max-h-[680px] space-y-3 overflow-y-auto scrollbar-thin pr-1">
+              {items.map((item, i) => (
+                <Card
+                  key={i}
+                  className="group flex items-start gap-3 p-4 transition-all hover:shadow-glow-primary"
+                >
+                  <Badge className="mt-0.5 h-7 min-w-7 shrink-0 justify-center rounded-lg bg-gradient-to-br from-fuchsia-500 to-rose-500 px-2 text-xs text-white">
+                    {i + 1}
+                  </Badge>
+                  <p className="flex-1 whitespace-pre-wrap break-words text-sm leading-relaxed">
+                    {item}
+                  </p>
+                  <CopyButton text={item} />
+                </Card>
+              ))}
+            </div>
           </div>
         ) : (
           <ResultPlaceholder
@@ -1002,33 +1027,43 @@ function PolishTool() {
             <Skeleton className="h-4 w-5/6" />
           </Card>
         ) : output ? (
-          <div className="grid gap-4 md:grid-cols-2">
-            <Card className="flex h-full flex-col p-4">
-              <div className="mb-3 flex items-center justify-between">
-                <span className="flex items-center gap-1.5 text-sm font-medium text-muted-foreground">
-                  <Clapperboard className="h-4 w-4" />
-                  原文案
-                </span>
-                <Badge variant="secondary" className="text-xs">
-                  {content.trim().length} 字
-                </Badge>
-              </div>
-              <div className="flex-1 overflow-y-auto scrollbar-thin whitespace-pre-wrap break-words rounded-lg bg-muted/30 p-3 text-sm leading-relaxed text-muted-foreground">
-                {content}
-              </div>
-            </Card>
-            <Card className="flex h-full flex-col border-primary/30 p-4">
-              <div className="mb-3 flex items-center justify-between">
-                <span className="flex items-center gap-1.5 text-sm font-medium text-primary">
-                  <Sparkles className="h-4 w-4" />
-                  润色后
-                </span>
-                <CopyButton text={output} label="复制润色稿" />
-              </div>
-              <div className="flex-1 overflow-y-auto scrollbar-thin whitespace-pre-wrap break-words rounded-lg bg-primary/5 p-3 text-sm leading-relaxed">
-                {output}
-              </div>
-            </Card>
+          <div>
+            <div className="mb-2 flex items-center justify-end gap-1.5">
+              <SaveToWorkspaceButton
+                field="script"
+                value={output}
+                defaultMovieTitle={movieTitle.trim()}
+                label="存入工作台"
+              />
+            </div>
+            <div className="grid gap-4 md:grid-cols-2">
+              <Card className="flex h-full flex-col p-4">
+                <div className="mb-3 flex items-center justify-between">
+                  <span className="flex items-center gap-1.5 text-sm font-medium text-muted-foreground">
+                    <Clapperboard className="h-4 w-4" />
+                    原文案
+                  </span>
+                  <Badge variant="secondary" className="text-xs">
+                    {content.trim().length} 字
+                  </Badge>
+                </div>
+                <div className="flex-1 overflow-y-auto scrollbar-thin whitespace-pre-wrap break-words rounded-lg bg-muted/30 p-3 text-sm leading-relaxed text-muted-foreground">
+                  {content}
+                </div>
+              </Card>
+              <Card className="flex h-full flex-col border-primary/30 p-4">
+                <div className="mb-3 flex items-center justify-between">
+                  <span className="flex items-center gap-1.5 text-sm font-medium text-primary">
+                    <Sparkles className="h-4 w-4" />
+                    润色后
+                  </span>
+                  <CopyButton text={output} label="复制润色稿" />
+                </div>
+                <div className="flex-1 overflow-y-auto scrollbar-thin whitespace-pre-wrap break-words rounded-lg bg-primary/5 p-3 text-sm leading-relaxed">
+                  {output}
+                </div>
+              </Card>
+            </div>
           </div>
         ) : (
           <ResultPlaceholder

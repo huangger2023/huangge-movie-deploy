@@ -21,6 +21,8 @@ import {
   Copy,
   Download,
   TrendingUp,
+  Search,
+  Filter,
 } from "lucide-react";
 import { toast } from "sonner";
 import { useAppStore } from "@/lib/store";
@@ -112,6 +114,11 @@ export function WorkspaceView() {
   const [createOpen, setCreateOpen] = React.useState(false);
   const [deleteId, setDeleteId] = React.useState<string | null>(null);
 
+  // 筛选 / 搜索 / 排序
+  const [search, setSearch] = React.useState("");
+  const [statusFilter, setStatusFilter] = React.useState<string>("all");
+  const [sortBy, setSortBy] = React.useState<"updated" | "created" | "progress">("updated");
+
   const fetchList = React.useCallback(async () => {
     if (!user) {
       setLoading(false);
@@ -131,6 +138,45 @@ export function WorkspaceView() {
   React.useEffect(() => {
     fetchList();
   }, [fetchList]);
+
+  // 派生：统计 + 筛选后列表
+  const stats = React.useMemo(() => {
+    const total = workspaces.length;
+    const inProgress = workspaces.filter((w) => w.status === "in-progress").length;
+    const done = workspaces.filter((w) => w.status === "done").length;
+    const draft = workspaces.filter((w) => w.status === "draft" || !w.status).length;
+    const totalWords = workspaces.reduce(
+      (s, w) =>
+        s + [w.script, w.titles, w.hooks, w.storyboard, w.notes]
+          .filter(Boolean)
+          .reduce((a, b) => a + b!.length, 0),
+      0
+    );
+    return { total, inProgress, done, draft, totalWords };
+  }, [workspaces]);
+
+  const filtered = React.useMemo(() => {
+    const q = search.trim().toLowerCase();
+    let list = workspaces;
+    if (q) list = list.filter((w) => w.movieTitle.toLowerCase().includes(q));
+    if (statusFilter !== "all") {
+      list = list.filter((w) => {
+        if (statusFilter === "draft") return w.status === "draft" || !w.status;
+        return w.status === statusFilter;
+      });
+    }
+    const sorted = [...list];
+    sorted.sort((a, b) => {
+      if (sortBy === "created") {
+        return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+      }
+      if (sortBy === "progress") {
+        return b.progress - a.progress;
+      }
+      return new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime();
+    });
+    return sorted;
+  }, [workspaces, search, statusFilter, sortBy]);
 
   // 未登录
   if (!user) {
@@ -189,7 +235,7 @@ export function WorkspaceView() {
         <motion.div
           initial={{ opacity: 0, y: 12 }}
           animate={{ opacity: 1, y: 0 }}
-          className="mb-8 flex items-end justify-between"
+          className="mb-6 flex items-end justify-between"
         >
           <div>
             <div className="mb-2 flex items-center gap-2">
@@ -209,6 +255,119 @@ export function WorkspaceView() {
             新建项目
           </Button>
         </motion.div>
+
+        {/* 统计栏 */}
+        {!loading && workspaces.length > 0 && (
+          <motion.div
+            initial={{ opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.1 }}
+            className="mb-5 grid grid-cols-2 gap-3 sm:grid-cols-4"
+          >
+            <Card className="flex items-center gap-3 p-3.5">
+              <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary/10 text-primary">
+                <FolderKanban className="h-4 w-4" />
+              </div>
+              <div>
+                <p className="text-[11px] text-muted-foreground">项目总数</p>
+                <p className="text-lg font-bold leading-tight">{stats.total}</p>
+              </div>
+            </Card>
+            <Card className="flex items-center gap-3 p-3.5">
+              <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-amber-500/15 text-amber-600 dark:text-amber-400">
+                <TrendingUp className="h-4 w-4" />
+              </div>
+              <div>
+                <p className="text-[11px] text-muted-foreground">进行中</p>
+                <p className="text-lg font-bold leading-tight">{stats.inProgress}</p>
+              </div>
+            </Card>
+            <Card className="flex items-center gap-3 p-3.5">
+              <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-emerald-500/15 text-emerald-600 dark:text-emerald-400">
+                <CheckCircle2 className="h-4 w-4" />
+              </div>
+              <div>
+                <p className="text-[11px] text-muted-foreground">已完成</p>
+                <p className="text-lg font-bold leading-tight">{stats.done}</p>
+              </div>
+            </Card>
+            <Card className="flex items-center gap-3 p-3.5">
+              <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-accent/15 text-accent-foreground">
+                <FileText className="h-4 w-4" />
+              </div>
+              <div>
+                <p className="text-[11px] text-muted-foreground">累计字数</p>
+                <p className="text-lg font-bold leading-tight">
+                  {stats.totalWords >= 10000
+                    ? `${(stats.totalWords / 10000).toFixed(1)}万`
+                    : stats.totalWords}
+                </p>
+              </div>
+            </Card>
+          </motion.div>
+        )}
+
+        {/* 搜索 + 筛选 + 排序 */}
+        {!loading && workspaces.length > 0 && (
+          <motion.div
+            initial={{ opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.15 }}
+            className="mb-5 flex flex-col gap-3 sm:flex-row sm:items-center"
+          >
+            <div className="relative flex-1">
+              <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+              <Input
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                placeholder="搜索项目（电影名）…"
+                className="h-9 pl-9"
+              />
+            </div>
+            <div className="flex items-center gap-1.5 overflow-x-auto scrollbar-thin">
+              {[
+                { id: "all", label: "全部", count: stats.total },
+                { id: "in-progress", label: "进行中", count: stats.inProgress },
+                { id: "done", label: "已完成", count: stats.done },
+                { id: "draft", label: "草稿", count: stats.draft },
+              ].map((opt) => (
+                <button
+                  key={opt.id}
+                  onClick={() => setStatusFilter(opt.id)}
+                  className={cn(
+                    "flex shrink-0 items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs transition-all",
+                    statusFilter === opt.id
+                      ? "border-primary bg-primary text-primary-foreground shadow-sm"
+                      : "border-border/60 bg-card/60 text-muted-foreground hover:border-primary/40 hover:text-foreground"
+                  )}
+                >
+                  {opt.label}
+                  <span
+                    className={cn(
+                      "rounded-full px-1.5 py-px text-[10px]",
+                      statusFilter === opt.id
+                        ? "bg-primary-foreground/20"
+                        : "bg-muted"
+                    )}
+                  >
+                    {opt.count}
+                  </span>
+                </button>
+              ))}
+            </div>
+            <Select value={sortBy} onValueChange={(v) => setSortBy(v as typeof sortBy)}>
+              <SelectTrigger className="h-9 w-[140px] shrink-0 text-xs">
+                <Filter className="mr-1.5 h-3.5 w-3.5" />
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="updated">最近更新</SelectItem>
+                <SelectItem value="created">创建时间</SelectItem>
+                <SelectItem value="progress">完成度</SelectItem>
+              </SelectContent>
+            </Select>
+          </motion.div>
+        )}
 
         {/* 项目网格 */}
         {loading ? (
@@ -232,9 +391,27 @@ export function WorkspaceView() {
               创建第一个项目
             </Button>
           </Card>
+        ) : filtered.length === 0 ? (
+          <Card className="flex flex-col items-center justify-center py-16 text-center">
+            <Search className="mb-3 h-10 w-10 text-muted/40" />
+            <h3 className="mb-1 text-base font-semibold">未找到匹配的项目</h3>
+            <p className="mb-4 text-sm text-muted-foreground">
+              试试调整搜索关键词或筛选条件
+            </p>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => {
+                setSearch("");
+                setStatusFilter("all");
+              }}
+            >
+              清除筛选
+            </Button>
+          </Card>
         ) : (
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            {workspaces.map((ws, i) => (
+            {filtered.map((ws, i) => (
               <motion.div
                 key={ws.id}
                 initial={{ opacity: 0, y: 16 }}

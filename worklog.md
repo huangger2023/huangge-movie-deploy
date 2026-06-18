@@ -492,3 +492,95 @@ Agent: 主控 Agent (Z.ai Code) — cron 触发的 webDevReview
 2. 联网搜索改 SSE 流式
 3. 课程详情页加视频播放器
 4. AI 助教加「清除历史」按钮
+
+---
+Task ID: 12 (cron 巡检轮 · 存入工作台 + AI 助教清除历史 + 工作台增强)
+Agent: 主控 Agent (Z.ai Code) — cron 触发的 webDevReview
+
+## 项目当前状态判断
+项目稳定。dev log 健康，lint 0 errors。核心流程全部可用。上轮工作台功能已上线，本轮重点是把 AI 工具与工作台打通（一键存入），并完善 AI 助教和工作台管理体验。
+
+## 本轮工作
+
+### QA 测试 (agent-browser + curl)
+- 主页/课程中心/创作工作台 全部正常，无 console error
+- 用 React setter 触发 input 事件成功填表（agent-browser 直接 .value= 不触发 React onChange）
+- curl 验证 /api/ai/script 200 in 6.4s，文案生成正常
+- 工作台已有 1 个 demo 项目（盗梦空间/进行中/25%）
+
+### 新需求1：AI 工具生成结果一键存入工作台（核心）
+**痛点**：上轮工作台已建立，但 AI 工具（文案/标题/开头/润色）生成完结果后，需用户手动复制粘贴到工作台，效率低。
+**实现**：
+- **新建共享组件** `src/components/site/save-to-workspace-dialog.tsx`：
+  - `SaveToWorkspaceDialog`：完整的存入 dialog（项目列表 + 搜索 + 新建项目表单 + 覆盖警告）
+  - `SaveToWorkspaceButton`：自带 dialog 状态的便捷按钮，未登录提示登录
+  - 列表项显示：彩色电影图标 + 电影名 + 类型 + 状态 badge + 进度 + 已填模块
+  - 已存在同字段时显示琥珀色警告（X 字 → Y 字覆盖提示）
+  - 新建项目支持 5 种主题色选择
+  - 保存成功 toast 提供「前往」按钮跳转工作台
+- **集成 5 个入口**：
+  1. script-generator-view ResultPanel 工具栏（script 字段，分镜表模式存 storyboard 字段）
+  2. tools-view TitleTool 结果头（titles 字段）
+  3. tools-view HookTool 结果头（hooks 字段，自动加序号拼接）
+  4. tools-view PolishTool 结果头（script 字段）
+- **重构**：提取 `exportStoryboardMarkdown` 顶级函数，复用给分镜表导出和存入工作台
+- **未登录拦截**：SaveToWorkspaceButton 检测 user，未登录 toast 引导登录
+
+### 新需求2：AI 助教「清除历史」按钮
+**痛点**：上轮加了对话历史持久化，但学员无法清除不想保留的对话（如误问、测试问题）。
+**实现**：
+- **后端** `/api/ai/assistant` 新增 DELETE handler：按 lessonId + userId deleteMany，返回 deleted count
+- **前端** course-detail-view LessonAssistant：
+  - 标题栏从 `<button>` 改为 `<div>` 容器，把「清除历史」按钮放在右侧
+  - 用 AlertDialog 二次确认：显示「将永久删除你在《课时标题》与 AI 助教的所有对话（共 N 条），此操作不可撤销」
+  - 删除中显示 spinner，删除后 setMessages([]) + toast「已清除 N 条历史对话」
+  - 智能显示：messages.length > 0 才显示按钮（避免空对话时误操作）
+
+### 新需求3：工作台列表增强（搜索/筛选/排序/统计）
+**痛点**：项目数量增多后难以管理，缺少检索和分类手段。
+**实现**：
+- **统计栏**（4 张卡片）：项目总数 / 进行中 / 已完成 / 累计字数（≥10000 显示万）
+- **搜索框**：按电影名实时筛选（lowercase includes）
+- **状态筛选 chips**：全部 / 进行中 / 已完成 / 草稿，每个 chip 显示对应数量，选中态 primary 色
+- **排序下拉**：最近更新（默认）/ 创建时间 / 完成度，三种排序方式
+- **空状态分级**：
+  - 完全无项目：引导创建第一个
+  - 筛选无结果：显示「未找到匹配的项目」+ 清除筛选按钮
+- **派生数据用 useMemo**：stats 和 filtered 都 memoized，避免重渲染
+
+### 代码细节
+- 修复 lint 警告：移除 save-to-workspace-dialog 里多余的 eslint-disable 注释
+- 移除 workspace-view 未使用的 LayoutGrid/List 导入
+- 保留所有原有 framer-motion 动画、玻璃态、电影感设计系统
+- 所有按钮 hover 状态、loading spinner、toast 反馈完整
+
+## 验证结果 (agent-browser + curl)
+- **存入工作台（文案）**：生成盗梦空间文案 → 点存入工作台 → 弹 dialog 显示「共 710 字」→ 选盗梦空间项目 → PATCH 200 → 跳工作台 → 进项目 → 文案 tab 显示完整 710 字文案 ✓
+- **存入工作台（标题）**：标题工具生成 8 条 → 点存入工作台 → dialog 显示「共 164 字」→ 选项目 → PATCH 200 → 工作台标题 tab 显示「1. 盗梦空间：你的梦境正在被入侵…」8 条 ✓
+- **存入工作台（润色）**：润色完成 → 存入工作台按钮显示 ✓
+- **存入工作台（开头）**：开头生成 → 存入工作台按钮显示 ✓
+- **AI 助教清除历史**：打开助教 → 显示历史 2 条 + 清除历史按钮 → 点清除 → AlertDialog「共 2 条，不可撤销」→ 确认 → DELETE 200 → 气泡 0 + 快捷问题重新显示 + 清除按钮自动隐藏 ✓
+- **工作台搜索**：输入「不存在的电影」→ 显示「未找到匹配的项目」+ 清除筛选 ✓
+- **工作台状态筛选**：点「已完成」chip → 显示无结果（demo 没有已完成项目）→ 点「全部」→ 恢复显示 ✓
+- **工作台统计栏**：显示「项目总数 1 / 进行中 1 / 已完成 0 / 累计字数 874」✓
+- **lint 0 errors**
+
+## 未解决问题/风险
+- AI 工具生成结果存入工作台时，没有自动用电影名匹配现有项目（用户需手动选）
+- 工作台暂无批量操作（批量删除/批量改状态）
+- 联网搜索 12.6s 仍偏慢（page_reader 单读 + 18s 超时已是最优）
+- 课程 videoUrl 仍为 null
+
+## 建议下一阶段优先事项
+1. AI 工具生成后自动按电影名匹配工作台项目（默认选中同名项目，无需手动选）
+2. 工作台批量操作（多选删除/批量改状态）
+3. 工作台项目支持「复制为新项目」（基于现有项目创建新电影）
+4. AI 助教支持「导出对话」为 markdown，便于复习
+5. 联网搜索改 SSE 流式返回，提升体感速度
+6. 课程详情页加视频播放器支持
+
+## 测试账号
+- 管理员：admin@yingshu.com / admin123
+- 学员：demo@yingshu.com / 123456
+- dev server：http://localhost:3000，lint 0 errors
+- 定时任务：webDevReview 每15分钟自动巡检（job_id: 213591）
