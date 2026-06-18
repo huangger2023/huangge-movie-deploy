@@ -11,6 +11,7 @@ import {
   Settings,
   LogIn,
   LogOut,
+  FolderKanban,
   Menu,
   X,
   GraduationCap,
@@ -42,6 +43,7 @@ const NAV: { key: ViewKey; label: string; icon: React.ElementType }[] = [
   { key: "courses", label: "课程中心", icon: LayoutGrid },
   { key: "script-generator", label: "AI文案生成", icon: Sparkles },
   { key: "tools", label: "创作工具箱", icon: Wand2 },
+  { key: "workspace", label: "创作工作台", icon: FolderKanban },
   { key: "dashboard", label: "我的学习", icon: LayoutDashboard },
 ];
 

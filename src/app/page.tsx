@@ -12,6 +12,7 @@ import { ToolsView } from "@/components/views/tools-view";
 import { DashboardView } from "@/components/views/dashboard-view";
 import { AdminView } from "@/components/views/admin-view";
 import { AuthView } from "@/components/views/auth-view";
+import { WorkspaceView } from "@/components/views/workspace-view";
 import { toast } from "sonner";
 
 export default function Page() {
@@ -54,6 +55,7 @@ export default function Page() {
             {view === "dashboard" && <DashboardView />}
             {view === "admin" && <AdminView />}
             {view === "auth" && <AuthView />}
+            {view === "workspace" && <WorkspaceView />}
           </React.Suspense>
         )}
       </main>

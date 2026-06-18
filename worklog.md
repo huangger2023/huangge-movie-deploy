@@ -446,3 +446,49 @@ Agent: 主控 Agent (Z.ai Code) — cron 触发的 webDevReview
 2. 联网搜索改 SSE 流式（先返回 snippets，fullPlot 异步补充）
 3. 课程详情页加视频播放器支持
 4. AI 助教加「清除历史」按钮
+
+---
+Task ID: 11 (cron 巡检轮 · 创作工作台)
+Agent: 主控 Agent (Z.ai Code) — cron 触发的 webDevReview
+
+## 项目当前状态判断
+项目稳定。QA 无 console error，lint 0 errors。核心流程全部可用。
+
+## 本轮工作
+
+### 新需求：「创作工作台」(已完成)
+**痛点**：之前生成的文案/标题/开头/分镜散落在各工具和历史记录里，没有统一管理，创作者难以跟踪每部电影的创作进度。
+**实现**：
+- **DB**：Prisma 新增 Workspace 模型（userId/movieTitle/genre/coverColor/status/script/titles/hooks/storyboard/notes），db:push + generate
+- **API**：
+  - GET /api/workspaces 列表（含 progress 计算填充模块占比）
+  - POST /api/workspaces 新建
+  - PATCH /api/workspaces/[id] 更新单字段（防抖保存用）
+  - DELETE /api/workspaces/[id] 删除
+- **视图** workspace-view.tsx（约560行）：
+  - 项目列表：卡片网格（顶部色带+电影名+类型+状态badge+进度条+4模块状态图标+更新时间+删除）
+  - 空状态引导
+  - 新建项目 Dialog（电影名+类型+5种主题色选择）
+  - 项目编辑器：返回按钮+电影信息+状态切换+导出按钮+完成度进度条+5个tab（文案/标题/开头/分镜/笔记）+每个tab的编辑区（Textarea+复制+用AI生成跳转）+防抖自动保存（1秒）+导出完整项目为Markdown
+- **导航集成**：header 加「创作工作台」入口（FolderKanban图标）、footer 加链接、store 加 workspace view、page.tsx 路由
+
+**验证** (agent-browser + curl)：
+- curl：登录→创建"盗梦空间"项目→PATCH script+status→列表返回进度25%（1/4模块）✓
+- 浏览器：导航到工作台→显示项目卡（盗梦空间/进行中/25%）→点击进入编辑器→textarea显示已保存内容→编辑→1秒后自动保存（curl验证持久化）→切换tab（标题/开头/分镜/笔记）placeholder正确变化 ✓
+- dev log: GET/POST/PATCH /api/workspaces 全部 200
+
+## 验证结果
+- lint 0 errors
+- 创作工作台端到端可用：创建/编辑/自动保存/切换tab/导出/删除
+- 与现有 AI 工具联动：编辑器内「用AI生成」按钮跳转到对应工具
+
+## 未解决问题/风险
+- 工作台与 AI 工具的数据回流还差一步（AI 工具生成后需手动复制到工作台，下轮可做一键存入工作台）
+- 课程 videoUrl 仍为 null
+- 联网搜索 12.6s 仍偏慢
+
+## 建议下一阶段优先事项
+1. AI 工具生成结果加「存入工作台」按钮（选项目→自动填入对应字段）
+2. 联网搜索改 SSE 流式
+3. 课程详情页加视频播放器
+4. AI 助教加「清除历史」按钮

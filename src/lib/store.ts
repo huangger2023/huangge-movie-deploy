@@ -11,7 +11,8 @@ export type ViewKey =
   | "tools"
   | "dashboard"
   | "admin"
-  | "auth";
+  | "auth"
+  | "workspace";
 
 export interface CurrentUser {
   id: string;

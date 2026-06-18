@@ -17,9 +17,9 @@ const FOOTER_LINKS: { title: string; links: { label: string; view?: ViewKey }[] 
     title: "创作工具",
     links: [
       { label: "AI文案生成", view: "script-generator" },
+      { label: "创作工作台", view: "workspace" },
       { label: "爆款标题", view: "tools" },
       { label: "黄金开头", view: "tools" },
-      { label: "文案润色", view: "tools" },
     ],
   },
   {
