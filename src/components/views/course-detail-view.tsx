@@ -89,6 +89,7 @@ interface Enrollment {
   id: string;
   progress: number;
   lastLessonId?: string | null;
+  completedAt?: string | null;
 }
 
 const LEVEL_STYLE: Record<string, string> = {
@@ -118,65 +119,85 @@ export function CourseDetailView() {
   const [expandedId, setExpandedId] = React.useState<string | null>(null);
   const [enrolling, setEnrolling] = React.useState(false);
   const [favorited, setFavorited] = React.useState(false);
-  // 已完成课时 id 集合（localStorage 持久化）
+  // 已完成课时 id 集合（后端持久化 + localStorage 缓存）
   const [completedLessons, setCompletedLessons] = React.useState<Set<string>>(new Set());
   const [markingLessonId, setMarkingLessonId] = React.useState<string | null>(null);
 
-  // 加载本地存储的完成记录
+  // 加载后端完成记录（已登录）+ localStorage 兜底（未登录/试看）
   React.useEffect(() => {
     if (!selectedCourseId) return;
-    try {
-      const raw = localStorage.getItem(`course-progress-${selectedCourseId}`);
-      if (raw) {
-        const arr = JSON.parse(raw) as string[];
-        setCompletedLessons(new Set(arr));
-      }
-    } catch {}
-  }, [selectedCourseId]);
-
-  // 同步到 enrollment.progress
-  const syncProgress = React.useCallback(
-    async (newCompleted: Set<string>) => {
-      if (!enrollment || !course || lessons.length === 0) return;
-      const progress = Math.round((newCompleted.size / lessons.length) * 100);
+    // 未登录用 localStorage
+    if (!user) {
       try {
-        const res = await fetch("/api/enrollments", {
-          method: "PATCH",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            courseId: course.id,
-            progress,
-            lastLessonId: expandedId,
-          }),
-        });
-        if (res.ok) {
-          const data = await res.json();
-          setEnrollment(data.enrollment);
+        const raw = localStorage.getItem(`course-progress-${selectedCourseId}`);
+        if (raw) {
+          setCompletedLessons(new Set(JSON.parse(raw) as string[]));
         }
       } catch {}
-    },
-    [enrollment, course, lessons, expandedId]
-  );
+      return;
+    }
+    // 已登录用后端 API
+    fetch(`/api/lessons/none/complete?courseId=${selectedCourseId}`)
+      .then((r) => r.json())
+      .then((d) => {
+        if (d.completedLessonIds) {
+          setCompletedLessons(new Set(d.completedLessonIds as string[]));
+        }
+      })
+      .catch(() => {});
+  }, [selectedCourseId, user]);
 
   const toggleLessonComplete = async (lessonId: string) => {
+    const isCompleted = completedLessons.has(lessonId);
     const next = new Set(completedLessons);
-    if (next.has(lessonId)) {
+    if (isCompleted) {
       next.delete(lessonId);
     } else {
       next.add(lessonId);
     }
     setCompletedLessons(next);
     setMarkingLessonId(lessonId);
-    // 持久化到 localStorage
+    // 未登录：localStorage 兜底
+    if (!user) {
+      try {
+        localStorage.setItem(
+          `course-progress-${selectedCourseId}`,
+          JSON.stringify(Array.from(next))
+        );
+      } catch {}
+      setMarkingLessonId(null);
+      return;
+    }
+    // 已登录：调用后端 API
     try {
-      localStorage.setItem(
-        `course-progress-${selectedCourseId}`,
-        JSON.stringify(Array.from(next))
-      );
-    } catch {}
-    // 同步到后端 enrollment
-    await syncProgress(next);
-    setMarkingLessonId(null);
+      const method = isCompleted ? "DELETE" : "POST";
+      const res = await fetch(`/api/lessons/${lessonId}/complete`, { method });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "操作失败");
+      // 同步 enrollment.progress 到本地 state
+      if (enrollment && data.progress !== undefined) {
+        setEnrollment({
+          ...enrollment,
+          progress: data.progress,
+          completedAt: data.progress >= 100 ? new Date().toISOString() : enrollment.completedAt,
+        });
+      }
+      if (isCompleted) {
+        toast.success("已取消标记");
+      } else {
+        toast.success("已标记为本节已学", {
+          description: data.progress >= 100
+            ? "🎉 恭喜完成全部课时！"
+            : `课程进度：${data.completedLessons}/${data.totalLessons}（${data.progress}%）`,
+        });
+      }
+    } catch (e) {
+      // 回滚
+      setCompletedLessons(completedLessons);
+      toast.error(e instanceof Error ? e.message : "操作失败");
+    } finally {
+      setMarkingLessonId(null);
+    }
   };
 
   const fetchCourse = React.useCallback(async () => {

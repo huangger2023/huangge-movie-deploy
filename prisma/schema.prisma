@@ -28,6 +28,7 @@ model User {
   plotDocs     PlotDocument[]
   chatMessages ChatMessage[]
   workspaces   Workspace[]
+  lessonCompletions LessonCompletion[]
 }
 
 model Course {
@@ -58,6 +59,7 @@ model Course {
 
   lessons       Lesson[]
   enrollments   Enrollment[]
+  lessonCompletions LessonCompletion[]
 }
 
 model Lesson {
@@ -72,6 +74,22 @@ model Lesson {
   createdAt  DateTime @default(now())
 
   course     Course   @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  completions LessonCompletion[]
+}
+
+model LessonCompletion {
+  id          String   @id @default(cuid())
+  userId      String
+  lessonId    String
+  courseId    String
+  completedAt DateTime @default(now())
+
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  lesson      Lesson    @relation(fields: [lessonId], references: [id], onDelete: Cascade)
+  course      Course    @relation(fields: [courseId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, lessonId])
+  @@index([userId, courseId])
 }
 
 model Enrollment {

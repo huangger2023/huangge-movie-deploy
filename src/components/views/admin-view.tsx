@@ -25,6 +25,8 @@ import {
   Activity,
   GraduationCap,
   Layers,
+  BookCheck,
+  Search,
 } from "lucide-react";
 import { useAppStore } from "@/lib/store";
 import { toast } from "sonner";
@@ -468,7 +470,7 @@ export function AdminView() {
           className="mt-6"
         >
           <Tabs defaultValue="courses" className="w-full">
-            <TabsList className="grid w-full max-w-md grid-cols-2">
+            <TabsList className="grid w-full max-w-md grid-cols-3">
               <TabsTrigger value="courses" className="gap-1.5">
                 <BookOpen className="h-3.5 w-3.5" />
                 课程管理
@@ -476,6 +478,10 @@ export function AdminView() {
               <TabsTrigger value="dashboard" className="gap-1.5">
                 <BarChart3 className="h-3.5 w-3.5" />
                 数据看板
+              </TabsTrigger>
+              <TabsTrigger value="students" className="gap-1.5">
+                <Users className="h-3.5 w-3.5" />
+                学员管理
               </TabsTrigger>
             </TabsList>
 
@@ -635,6 +641,11 @@ export function AdminView() {
                 totalRevenue={totalRevenue}
                 loading={loading}
               />
+            </TabsContent>
+
+            {/* 学员管理 Tab */}
+            <TabsContent value="students" className="mt-4">
+              <StudentsTab courses={courses} />
             </TabsContent>
           </Tabs>
         </motion.div>
@@ -1667,6 +1678,241 @@ function DashboardTab({
           </div>
         </Card>
       </div>
+    </div>
+  );
+}
+
+/* ----------------------- 学员管理组件 ----------------------- */
+
+interface StudentItem {
+  id: string;
+  name: string;
+  email: string;
+  avatar: string | null;
+  bio: string | null;
+  createdAt: string;
+  _count: {
+    enrollments: number;
+    scripts: number;
+    lessonCompletions: number;
+  };
+  enrollment?: {
+    progress: number;
+    enrolledAt: string;
+    completedAt: string | null;
+    lastActiveAt: string;
+  };
+}
+
+interface StudentsStats {
+  totalStudents: number;
+  totalEnrollments: number;
+  totalCompletions: number;
+  activeToday: number;
+}
+
+function StudentsTab({ courses }: { courses: AdminCourse[] }) {
+  const [students, setStudents] = React.useState<StudentItem[]>([]);
+  const [stats, setStats] = React.useState<StudentsStats | null>(null);
+  const [loading, setLoading] = React.useState(true);
+  const [search, setSearch] = React.useState("");
+  const [courseFilter, setCourseFilter] = React.useState("");
+
+  const fetchStudents = React.useCallback(async () => {
+    setLoading(true);
+    try {
+      const params = new URLSearchParams();
+      if (search.trim()) params.set("search", search.trim());
+      if (courseFilter) params.set("courseId", courseFilter);
+      const res = await fetch(`/api/admin/students?${params.toString()}`);
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "加载失败");
+      setStudents(data.students || []);
+      setStats(data.stats);
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "加载学员失败");
+    } finally {
+      setLoading(false);
+    }
+  }, [search, courseFilter]);
+
+  React.useEffect(() => {
+    const timer = setTimeout(fetchStudents, 300);
+    return () => clearTimeout(timer);
+  }, [fetchStudents]);
+
+  const formatDate = (iso: string) => {
+    const d = new Date(iso);
+    return d.toLocaleDateString("zh-CN", { year: "numeric", month: "2-digit", day: "2-digit" });
+  };
+
+  const formatRelative = (iso: string) => {
+    const diff = (Date.now() - new Date(iso).getTime()) / 1000;
+    if (diff < 3600) return `${Math.floor(diff / 60)}分钟前`;
+    if (diff < 86400) return `${Math.floor(diff / 3600)}小时前`;
+    if (diff < 604800) return `${Math.floor(diff / 86400)}天前`;
+    return formatDate(iso);
+  };
+
+  return (
+    <div className="space-y-5">
+      {/* 学员统计卡 */}
+      {stats && (
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          {[
+            {
+              icon: Users,
+              label: "学员总数",
+              value: stats.totalStudents,
+              tint: "from-rose-500/15 to-rose-500/5 text-rose-500",
+            },
+            {
+              icon: GraduationCap,
+              label: "报名总数",
+              value: stats.totalEnrollments,
+              tint: "from-amber-500/15 to-amber-500/5 text-amber-500",
+            },
+            {
+              icon: BookCheck,
+              label: "课时完成数",
+              value: stats.totalCompletions,
+              tint: "from-emerald-500/15 to-emerald-500/5 text-emerald-500",
+            },
+            {
+              icon: Activity,
+              label: "今日活跃",
+              value: stats.activeToday,
+              tint: "from-violet-500/15 to-violet-500/5 text-violet-500",
+            },
+          ].map((m, i) => (
+            <motion.div key={m.label} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.06 }}>
+              <Card className="relative overflow-hidden p-4">
+                <div className={cn("absolute -right-3 -top-3 h-16 w-16 rounded-full bg-gradient-to-br opacity-50 blur-2xl", m.tint)} />
+                <div className="relative flex items-center gap-3">
+                  <div className={cn("flex h-9 w-9 items-center justify-center rounded-lg bg-gradient-to-br", m.tint)}>
+                    <m.icon className="h-4 w-4" />
+                  </div>
+                  <div>
+                    <div className="text-xl font-bold">{m.value.toLocaleString()}</div>
+                    <div className="text-[11px] text-muted-foreground">{m.label}</div>
+                  </div>
+                </div>
+              </Card>
+            </motion.div>
+          ))}
+        </div>
+      )}
+
+      {/* 搜索 + 筛选 */}
+      <Card className="p-4">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+          <div className="relative flex-1">
+            <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+            <Input
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="搜索学员昵称或邮箱…"
+              className="h-9 pl-9"
+            />
+          </div>
+          <Select value={courseFilter} onValueChange={setCourseFilter}>
+            <SelectTrigger className="h-9 w-full sm:w-[200px]">
+              <SelectValue placeholder="全部课程" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="">全部课程</SelectItem>
+              {courses.map((c) => (
+                <SelectItem key={c.id} value={c.id}>
+                  {c.title}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+      </Card>
+
+      {/* 学员列表 */}
+      <Card className="p-0">
+        <div className="border-b px-5 py-4">
+          <h3 className="text-base font-semibold">学员列表</h3>
+          <p className="text-xs text-muted-foreground">
+            共 {students.length} 位学员{courseFilter ? "（已按课程筛选）" : ""}
+          </p>
+        </div>
+        {loading ? (
+          <div className="space-y-2 p-5">
+            {Array.from({ length: 5 }).map((_, i) => (
+              <div key={i} className="h-14 animate-pulse rounded-md bg-muted/40" />
+            ))}
+          </div>
+        ) : students.length === 0 ? (
+          <div className="flex flex-col items-center justify-center py-16 text-center">
+            <Users className="mb-3 h-10 w-10 text-muted-foreground/40" />
+            <p className="text-sm text-muted-foreground">
+              {search || courseFilter ? "未找到匹配的学员" : "暂无学员"}
+            </p>
+          </div>
+        ) : (
+          <div className="scrollbar-thin max-h-[600px] overflow-y-auto">
+            {students.map((s, i) => (
+              <motion.div
+                key={s.id}
+                initial={{ opacity: 0, y: 4 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: i * 0.03 }}
+                className="flex items-center gap-4 border-b border-border/40 p-4 transition-colors hover:bg-muted/30"
+              >
+                {/* 头像 */}
+                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-primary to-accent text-sm font-bold text-primary-foreground">
+                  {s.name.slice(0, 1)}
+                </div>
+                {/* 信息 */}
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-center gap-2">
+                    <p className="truncate text-sm font-medium">{s.name}</p>
+                    {s.enrollment?.completedAt && (
+                      <Badge variant="outline" className="shrink-0 border-emerald-500/30 text-[10px] text-emerald-600 dark:text-emerald-400">
+                        已结业
+                      </Badge>
+                    )}
+                  </div>
+                  <p className="truncate text-xs text-muted-foreground">{s.email}</p>
+                </div>
+                {/* 数据 */}
+                <div className="hidden shrink-0 gap-4 text-xs text-muted-foreground sm:flex">
+                  <div className="text-center">
+                    <div className="font-semibold text-foreground">{s._count.enrollments}</div>
+                    <div className="text-[10px]">报名</div>
+                  </div>
+                  <div className="text-center">
+                    <div className="font-semibold text-foreground">{s._count.scripts}</div>
+                    <div className="text-[10px]">文案</div>
+                  </div>
+                  <div className="text-center">
+                    <div className="font-semibold text-foreground">{s._count.lessonCompletions}</div>
+                    <div className="text-[10px]">完成课时</div>
+                  </div>
+                </div>
+                {/* 进度（如有筛选课程） */}
+                {s.enrollment && (
+                  <div className="shrink-0 w-24 text-right">
+                    <div className="text-xs font-semibold text-primary">
+                      {Math.round(s.enrollment.progress)}%
+                    </div>
+                    <div className="text-[10px] text-muted-foreground">
+                      {formatRelative(s.enrollment.lastActiveAt)}
+                    </div>
+                  </div>
+                )}
+                {/* 注册时间 */}
+                <div className="hidden shrink-0 text-right text-[11px] text-muted-foreground md:block">
+                  {formatDate(s.createdAt)}
+                </div>
+              </motion.div>
+            ))}
+          </div>
+        )}
+      </Card>
     </div>
   );
 }
