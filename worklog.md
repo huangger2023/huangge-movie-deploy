@@ -358,3 +358,47 @@ Agent: 主控 Agent (Z.ai Code) — cron 触发的 webDevReview
 2. AI 助教对话历史持久化（加 ChatMessage 表）
 3. 添加「创作工作台」：把生成的文案/标题/开头/分镜统一到一个项目里管理
 4. 联网搜索改 SSE 流式提升体感速度
+
+---
+Task ID: 9 (cron 巡检轮 · 标题/开头工具接 Agent 协作)
+Agent: 主控 Agent (Z.ai Code) — cron 触发的 webDevReview
+
+## 项目当前状态判断
+项目稳定。dev log 健康，lint 0 errors。核心流程全部可用。
+
+## 本轮工作
+
+### QA 测试 (agent-browser)
+- 主页/课程详情/创作工具箱 全部正常，无 console error
+- 上轮的 AI 课程助教功能验证正常
+
+### 新需求：爆款标题/黄金开头工具接 Agent 协作 (已完成)
+**痛点**：上轮只有完整文案生成器接了 Agent 协作（联网搜真实剧情），标题和开头工具仍会瞎编剧情。
+**实现**：
+- **后端**：ai.ts 的 generateTitles/generateHook 新增 plotContext 参数，传真实剧情时强制"标题/开头涉及的情节人物必须来自真实剧情参考，不得编造"；/api/ai/title 和 /api/ai/hook route 透传 plotContext
+- **前端**：tools-view 新增 useAgentPlot hook + AgentToggle 组件：
+  - useAgentPlot：管理开关/搜索状态/plotContext/sourceCount/error，search() 返回 ctx（解决 stale closure 问题）
+  - AgentToggle：Switch 开关 + 搜索按钮 + 来源 badge（显示"N个来源·Xk字"）+ 错误提示
+  - TitleTool/HookTool 集成：开启 Agent 时生成前自动搜索真实剧情，按钮文案动态变化（"生成爆款标题"→"生成爆款标题（基于真实剧情）"），loading 时显示"Agent 搜索剧情中…"
+- **修复 stale closure bug**：search() 原返回 boolean，run 函数里读 agent.plotContext 拿到旧值；改为返回 ctx 字符串，run 直接用返回值
+
+**验证** (agent-browser + curl)：
+- curl title + plotContext（肖申克）→ 生成"19年冤狱，他用一把小锤挖出了自由""银行家变囚徒，越狱竟是最高境界"——基于真实剧情
+- curl hook + plotContext（盗梦空间）→ 生成"如果梦境可以被植入，你会相信吗？""当梦境成为现实，你如何分辨？"——基于真实剧情
+- 浏览器：开启 Agent toggle → 按钮变"基于真实剧情" → 点击生成 → 联网搜索(64s) + 标题生成成功，结果含"柯布"等真实人物
+
+## 验证结果
+- lint 0 errors
+- 标题/开头工具 Agent 协作端到端可用，生成基于真实剧情不瞎编
+- 三个创作工具（完整文案/标题/开头）现在都支持 Agent 协作
+
+## 未解决问题/风险
+- 联网搜索仍较慢（64s，因 page_reader 深度读取2个页面），64s 等待期间 UI 状态管理有边界 case
+- 课程 videoUrl 仍为 null
+- AI 助教对话无持久化
+
+## 建议下一阶段优先事项
+1. 联网搜索改 SSE 流式 / 减少深度读取页面数（1个而非2个）提升速度
+2. AI 助教对话历史持久化（加 ChatMessage 表）
+3. 添加「创作工作台」：统一管理文案/标题/开头/分镜
+4. 课程详情页加视频播放器支持

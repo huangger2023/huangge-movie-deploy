@@ -90,16 +90,24 @@ export async function generateTitles(params: {
   movieTitle: string;
   genre: string;
   count?: number;
+  plotContext?: string;
 }) {
   const zai = await getZAI();
   const count = params.count ?? 8;
-  const systemPrompt = `你是抖音爆款标题专家，深谙"悬念型、反差型、数字型、争议型、情感型、提问型"六大爆款标题公式。标题要短、有钩子、带情绪、让人忍不住点开。`;
+  const systemPrompt = `你是抖音爆款标题专家，深諢"悬念型、反差型、数字型、争议型、情感型、提问型"六大爆款标题公式。标题要短、有钩子、带情绪、让人忍不住点开。
+${params.plotContext && params.plotContext.trim().length > 0 ? "如果提供了真实剧情参考，标题必须基于真实剧情制造悬念/反差，不得虚构情节。" : ""}`;
   const userPrompt = `为电影《${params.movieTitle}》（${params.genre}）生成 ${count} 个抖音电影解说爆款标题。
+
+${params.plotContext && params.plotContext.trim().length > 0 ? `【真实剧情参考（务必基于此创作标题，禁止虚构）】
+"""
+${params.plotContext.trim().slice(0, 3000)}
+"""` : ""}
 
 要求：
 1. 每个标题控制在30字以内
 2. 涵盖不同类型（悬念/反差/数字/争议/情感/提问）
 3. 在标题后用括号注明所属类型
+${params.plotContext && params.plotContext.trim().length > 0 ? "4. 标题里的情节必须来自真实剧情参考，不得编造" : ""}
 
 请按编号列表输出，格式：1. 标题内容（类型）`;
 
@@ -122,11 +130,18 @@ export async function generateHook(params: {
   genre: string;
   hookType: string;
   count?: number;
+  plotContext?: string;
 }) {
   const zai = await getZAI();
   const count = params.count ?? 5;
-  const systemPrompt = `你是抖音电影解说"黄金3秒"开头大师。你深信前3秒决定一条视频的生死，擅长用一句话把观众死死钉在屏幕上。`;
+  const systemPrompt = `你是抖音电影解说"黄金3秒"开头大师。你深信前3秒决定一条视频的生死，擅长用一句话把观众死死钉在屏幕上。
+${params.plotContext && params.plotContext.trim().length > 0 ? "如果提供了真实剧情参考，开头必须基于真实剧情制造钩子，不得虚构情节或人物。" : ""}`;
   const userPrompt = `为电影《${params.movieTitle}》（${params.genre}）生成 ${count} 个"${params.hookType}"类型的黄金3秒开头。
+
+${params.plotContext && params.plotContext.trim().length > 0 ? `【真实剧情参考（务必基于此创作开头，禁止虚构）】
+"""
+${params.plotContext.trim().slice(0, 3000)}
+"""` : ""}
 
 开头类型说明：
 - 悬念提问：用问题勾起好奇心
@@ -139,6 +154,7 @@ export async function generateHook(params: {
 1. 每个开头3秒内能说完（约15-25字）
 2. 极具画面感和冲击力
 3. 让人无法划走
+${params.plotContext && params.plotContext.trim().length > 0 ? "4. 开头涉及的情节/人物必须来自真实剧情参考，不得编造" : ""}
 
 请按编号列表输出，每个开头独立成行。`;
 

@@ -17,6 +17,7 @@ export async function POST(req: NextRequest) {
       genre: body.genre || "剧情",
       hookType: body.hookType || "悬念提问",
       count: body.count ?? 5,
+      plotContext: body.plotContext,
     });
 
     const user = await getCurrentUser();

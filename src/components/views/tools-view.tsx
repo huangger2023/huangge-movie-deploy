@@ -18,6 +18,10 @@ import {
   Volume2,
   Wand,
   Clapperboard,
+  Bot,
+  Search,
+  CheckCircle2,
+  AlertCircle,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -27,6 +31,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Slider } from "@/components/ui/slider";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import {
   Select,
@@ -37,6 +42,133 @@ import {
 } from "@/components/ui/select";
 import { useAppStore } from "@/lib/store";
 import { cn } from "@/lib/utils";
+
+/**
+ * Agent 协作 hook：管理「联网搜索真实剧情」开关 + 搜索状态
+ * 返回 plotContext（搜索结果）供生成时传入，以及搜索 UI 状态
+ */
+function useAgentPlot() {
+  const [enabled, setEnabled] = React.useState(false);
+  const [searching, setSearching] = React.useState(false);
+  const [plotContext, setPlotContext] = React.useState<string | null>(null);
+  const [sourceCount, setSourceCount] = React.useState(0);
+  const [error, setError] = React.useState<string | null>(null);
+
+  const reset = () => {
+    setPlotContext(null);
+    setSourceCount(0);
+    setError(null);
+  };
+
+  const search = async (movieTitle: string, genre?: string): Promise<string | null> => {
+    if (!movieTitle.trim()) {
+      toast.error("请先填写电影名称");
+      return null;
+    }
+    setSearching(true);
+    setError(null);
+    try {
+      const res = await fetch("/api/agent/search", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ movieTitle: movieTitle.trim(), genre }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "搜索失败");
+      const ctx = data.combined || data.snippets || "";
+      setPlotContext(ctx);
+      setSourceCount(data.sources?.length || 0);
+      toast.success(`Agent 已联网搜索到 ${data.sources?.length || 0} 个真实剧情来源`, {
+        description: "生成时将基于真实剧情，不瞎编",
+      });
+      return ctx;
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : "联网搜索失败";
+      setError(msg);
+      toast.error(msg);
+      return null;
+    } finally {
+      setSearching(false);
+    }
+  };
+
+  return { enabled, setEnabled, searching, plotContext, sourceCount, error, search, reset };
+}
+
+/** Agent 协作开关组件（标题/开头工具共用） */
+function AgentToggle({
+  agent,
+  movieTitle,
+  genre,
+}: {
+  agent: ReturnType<typeof useAgentPlot>;
+  movieTitle: string;
+  genre?: string;
+}) {
+  return (
+    <div className="rounded-xl border border-primary/20 bg-gradient-to-br from-primary/[0.04] to-accent/[0.04] p-3">
+      <div className="flex items-center gap-2">
+        <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-gradient-to-br from-primary to-accent">
+          <Bot className="h-4 w-4 text-primary-foreground" />
+        </div>
+        <div className="flex-1">
+          <p className="text-xs font-semibold">Agent 联网搜索真实剧情</p>
+          <p className="text-[10px] text-muted-foreground">
+            开启后生成前先联网搜索真实剧情，标题/开头基于真实情节不瞎编
+          </p>
+        </div>
+        <Switch
+          checked={agent.enabled}
+          onCheckedChange={(v) => {
+            agent.setEnabled(v);
+            if (!v) agent.reset();
+          }}
+        />
+      </div>
+      {agent.enabled && (
+        <motion.div
+          initial={{ opacity: 0, height: 0 }}
+          animate={{ opacity: 1, height: "auto" }}
+          className="overflow-hidden"
+        >
+          <div className="mt-2.5 flex items-center gap-2">
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => agent.search(movieTitle, genre)}
+              disabled={agent.searching || !movieTitle.trim()}
+              className="h-7 gap-1.5 rounded-full text-xs"
+            >
+              {agent.searching ? (
+                <Loader2 className="h-3.5 w-3.5 animate-spin" />
+              ) : (
+                <Search className="h-3.5 w-3.5" />
+              )}
+              {agent.searching ? "搜索中…" : agent.plotContext ? "重新搜索" : "搜索真实剧情"}
+            </Button>
+            {agent.plotContext && (
+              <Badge variant="outline" className="gap-1 border-emerald-500/30 text-emerald-600 dark:text-emerald-400">
+                <CheckCircle2 className="h-3 w-3" />
+                {agent.sourceCount} 个来源 · {(agent.plotContext.length / 1000).toFixed(1)}k 字
+              </Badge>
+            )}
+            {agent.error && (
+              <span className="flex items-center gap-1 text-[11px] text-destructive">
+                <AlertCircle className="h-3 w-3" />
+                {agent.error}
+              </span>
+            )}
+          </div>
+          {agent.plotContext && (
+            <p className="mt-2 text-[10px] leading-relaxed text-muted-foreground">
+              ✓ 生成时将基于以上真实剧情，标题/开头涉及情节忠于事实
+            </p>
+          )}
+        </motion.div>
+      )}
+    </div>
+  );
+}
 
 // Mirrored from src/lib/ai.ts (which is server-only) so this client view can
 // render the voice picker without pulling the Node-only SDK into the bundle.
@@ -418,11 +550,23 @@ function TitleTool() {
   const [loading, setLoading] = React.useState(false);
   const [output, setOutput] = React.useState<string | null>(null);
   const [items, setItems] = React.useState<string[]>([]);
+  const agent = useAgentPlot();
 
   const run = async () => {
     if (!movieTitle.trim()) {
       toast.error("请填写电影名称");
       return;
+    }
+    // 若开启 Agent 但还没搜索，先搜索
+    let plotContext: string | undefined;
+    if (agent.enabled) {
+      if (!agent.plotContext) {
+        const ctx = await agent.search(movieTitle, genre);
+        if (!ctx) return;
+        plotContext = ctx;
+      } else {
+        plotContext = agent.plotContext;
+      }
     }
     setLoading(true);
     setOutput(null);
@@ -435,13 +579,16 @@ function TitleTool() {
           movieTitle: movieTitle.trim(),
           genre,
           count,
+          plotContext,
         }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "生成失败");
       setOutput(data.output);
       setItems(parseNumberedItems(data.output));
-      toast.success(`已生成 ${count} 个爆款标题`);
+      toast.success(
+        `已生成 ${count} 个爆款标题` + (plotContext ? "（基于真实剧情）" : "")
+      );
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "生成失败");
     } finally {
@@ -498,20 +645,22 @@ function TitleTool() {
             />
           </Field>
 
+          <AgentToggle agent={agent} movieTitle={movieTitle} genre={genre} />
+
           <Button
             onClick={run}
-            disabled={loading}
+            disabled={loading || agent.searching}
             className="w-full bg-gradient-to-r from-amber-500 to-orange-500 text-white hover:opacity-90"
           >
-            {loading ? (
+            {loading || agent.searching ? (
               <>
                 <Loader2 className="h-4 w-4 animate-spin" />
-                生成中…
+                {agent.searching ? "Agent 搜索剧情中…" : "生成中…"}
               </>
             ) : (
               <>
                 <Sparkles className="h-4 w-4" />
-                生成爆款标题
+                {agent.enabled ? "生成爆款标题（基于真实剧情）" : "生成爆款标题"}
               </>
             )}
           </Button>
@@ -574,11 +723,22 @@ function HookTool() {
   const [count, setCount] = React.useState(5);
   const [loading, setLoading] = React.useState(false);
   const [items, setItems] = React.useState<string[]>([]);
+  const agent = useAgentPlot();
 
   const run = async () => {
     if (!movieTitle.trim()) {
       toast.error("请填写电影名称");
       return;
+    }
+    let plotContext: string | undefined;
+    if (agent.enabled) {
+      if (!agent.plotContext) {
+        const ctx = await agent.search(movieTitle, genre);
+        if (!ctx) return;
+        plotContext = ctx;
+      } else {
+        plotContext = agent.plotContext;
+      }
     }
     setLoading(true);
     setItems([]);
@@ -591,12 +751,15 @@ function HookTool() {
           genre,
           hookType,
           count,
+          plotContext,
         }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "生成失败");
       setItems(parseNumberedItems(data.output));
-      toast.success(`已生成 ${count} 个黄金开头`);
+      toast.success(
+        `已生成 ${count} 个黄金开头` + (plotContext ? "（基于真实剧情）" : "")
+      );
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "生成失败");
     } finally {
@@ -668,20 +831,22 @@ function HookTool() {
             />
           </Field>
 
+          <AgentToggle agent={agent} movieTitle={movieTitle} genre={genre} />
+
           <Button
             onClick={run}
-            disabled={loading}
+            disabled={loading || agent.searching}
             className="w-full bg-gradient-to-r from-fuchsia-500 to-rose-500 text-white hover:opacity-90"
           >
-            {loading ? (
+            {loading || agent.searching ? (
               <>
                 <Loader2 className="h-4 w-4 animate-spin" />
-                生成中…
+                {agent.searching ? "Agent 搜索剧情中…" : "生成中…"}
               </>
             ) : (
               <>
                 <Sparkles className="h-4 w-4" />
-                生成黄金开头
+                {agent.enabled ? "生成黄金开头（基于真实剧情）" : "生成黄金开头"}
               </>
             )}
           </Button>

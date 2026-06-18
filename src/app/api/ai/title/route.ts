@@ -16,6 +16,7 @@ export async function POST(req: NextRequest) {
       movieTitle: body.movieTitle.trim(),
       genre: body.genre || "剧情",
       count: body.count ?? 8,
+      plotContext: body.plotContext,
     });
 
     const user = await getCurrentUser();
