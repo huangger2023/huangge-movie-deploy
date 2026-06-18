@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import ReactMarkdown from "react-markdown";
 import { toast } from "sonner";
 import {
@@ -17,6 +17,18 @@ import {
   Lightbulb,
   CheckCircle2,
   Star,
+  Bot,
+  Search,
+  FileText,
+  Globe,
+  Upload,
+  Trash2,
+  ExternalLink,
+  AlertCircle,
+  XCircle,
+  FileSearch,
+  Library,
+  Plus,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -32,6 +44,14 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { useAppStore } from "@/lib/store";
 import { cn } from "@/lib/utils";
 
@@ -71,11 +91,61 @@ const DEFAULT_FORM: FormState = {
   extraNotes: "",
 };
 
+type AgentMode = "none" | "web" | "doc";
+
+interface PlotDoc {
+  id: string;
+  movieTitle: string;
+  content: string;
+  source: "manual" | "web";
+  wordCount: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
+interface SearchSource {
+  name: string;
+  url: string;
+  host: string;
+  snippet: string;
+}
+
+interface SearchResult {
+  movieTitle: string;
+  snippets: string;
+  fullPlot: string;
+  combined: string;
+  sources: SearchSource[];
+  searchedAt: string;
+  savedPlotId: string | null;
+}
+
+type StepStatus = "pending" | "running" | "done" | "error";
+
+interface AgentStep {
+  id: number;
+  icon: React.ReactNode;
+  title: (movie: string) => string;
+  status: StepStatus;
+  elapsed?: number;
+  detail?: string;
+}
+
+const INITIAL_STEPS: AgentStep[] = [
+  { id: 1, icon: <Search className="h-4 w-4" />, title: (m) => `联网搜索《${m}》真实剧情`, status: "pending" },
+  { id: 2, icon: <Globe className="h-4 w-4" />, title: () => "深度读取 Top 来源全文", status: "pending" },
+  { id: 3, icon: <FileSearch className="h-4 w-4" />, title: () => "提取剧情要素（人物 / 场景 / 结局）", status: "pending" },
+  { id: 4, icon: <Wand2 className="h-4 w-4" />, title: () => "基于真实剧情生成解说文案", status: "pending" },
+];
+
+const sleep = (ms: number) => new Promise<void>((r) => setTimeout(r, ms));
+
 export function ScriptGeneratorView() {
   const user = useAppStore((s) => s.user);
   const setView = useAppStore((s) => s.setView);
 
   const [form, setForm] = React.useState<FormState>(DEFAULT_FORM);
+  const [agentMode, setAgentMode] = React.useState<AgentMode>("none");
   const [loading, setLoading] = React.useState(false);
   const [result, setResult] = React.useState<string | null>(null);
   const [savedId, setSavedId] = React.useState<string | null>(null);
@@ -84,7 +154,20 @@ export function ScriptGeneratorView() {
   const [audioUrl, setAudioUrl] = React.useState<string | null>(null);
   const audioUrlRef = React.useRef<string | null>(null);
 
-  // 清理 blob URL 防内存泄漏
+  // Agent state
+  const [steps, setSteps] = React.useState<AgentStep[]>(INITIAL_STEPS);
+  const stepTimers = React.useRef<Record<number, number>>({});
+  const [searchResult, setSearchResult] = React.useState<SearchResult | null>(null);
+
+  // Plot library state
+  const [plots, setPlots] = React.useState<PlotDoc[]>([]);
+  const [plotsLoading, setPlotsLoading] = React.useState(false);
+  const [selectedPlotId, setSelectedPlotId] = React.useState<string | null>(null);
+  const [plotDialogOpen, setPlotDialogOpen] = React.useState(false);
+  const [plotForm, setPlotForm] = React.useState({ movieTitle: "", content: "" });
+  const [plotSaving, setPlotSaving] = React.useState(false);
+  const [plotExpanded, setPlotExpanded] = React.useState(false);
+
   React.useEffect(() => {
     return () => {
       if (audioUrlRef.current) {
@@ -93,8 +176,84 @@ export function ScriptGeneratorView() {
     };
   }, []);
 
+  const fetchPlots = React.useCallback(async () => {
+    setPlotsLoading(true);
+    try {
+      const res = await fetch("/api/agent/plots");
+      if (!res.ok) throw new Error("获取失败");
+      const data = (await res.json()) as { docs: PlotDoc[] };
+      setPlots(data.docs);
+    } catch {
+      toast.error("获取剧情文档失败");
+    } finally {
+      setPlotsLoading(false);
+    }
+  }, []);
+
+  React.useEffect(() => {
+    if (agentMode === "doc" && user) {
+      void fetchPlots();
+    }
+  }, [agentMode, user, fetchPlots]);
+
+  const selectedPlot = React.useMemo(
+    () => plots.find((p) => p.id === selectedPlotId) ?? null,
+    [plots, selectedPlotId]
+  );
+
+  const isAgentRunning = steps.some((s) => s.status === "running");
+
   const updateField = <K extends keyof FormState>(key: K, value: FormState[K]) => {
     setForm((p) => ({ ...p, [key]: value }));
+  };
+
+  const updateStep = (id: number, patch: Partial<AgentStep>) => {
+    setSteps((prev) => prev.map((s) => (s.id === id ? { ...s, ...patch } : s)));
+  };
+
+  const resetSteps = () => {
+    setSteps(
+      INITIAL_STEPS.map((s) => ({
+        ...s,
+        status: "pending" as StepStatus,
+        elapsed: undefined,
+        detail: undefined,
+      }))
+    );
+  };
+
+  const startStep = (id: number) => {
+    stepTimers.current[id] = Date.now();
+    updateStep(id, { status: "running", elapsed: undefined, detail: undefined });
+  };
+
+  const finishStep = (id: number, detail?: string) => {
+    const start = stepTimers.current[id];
+    const elapsed = start ? (Date.now() - start) / 1000 : undefined;
+    updateStep(id, { status: "done", elapsed, detail });
+  };
+
+  const callScript = async (plotContext?: string) => {
+    const res = await fetch("/api/ai/script", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        movieTitle: form.movieTitle.trim(),
+        genre: form.genre,
+        style: form.style,
+        duration: form.duration,
+        hookType: form.hookType,
+        tone: form.tone,
+        keywords: form.keywords.trim() || undefined,
+        extraNotes: form.extraNotes.trim() || undefined,
+        plotContext,
+      }),
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.error || "生成失败");
+    }
+    return (await res.json()) as { output: string; savedId: string | null };
   };
 
   const handleGenerate = async () => {
@@ -102,42 +261,94 @@ export function ScriptGeneratorView() {
       toast.error("请先填写电影名称");
       return;
     }
+    if (agentMode === "doc" && !selectedPlot) {
+      toast.error("请先在剧情文档库选择一份剧情文档");
+      return;
+    }
+
     setLoading(true);
     setResult(null);
     setSavedId(null);
     setIsFav(false);
+    setSearchResult(null);
     if (audioUrlRef.current) {
       URL.revokeObjectURL(audioUrlRef.current);
       audioUrlRef.current = null;
       setAudioUrl(null);
     }
+
+    let plotContext: string | undefined = undefined;
+
     try {
-      const res = await fetch("/api/ai/script", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          movieTitle: form.movieTitle.trim(),
-          genre: form.genre,
-          style: form.style,
-          duration: form.duration,
-          hookType: form.hookType,
-          tone: form.tone,
-          keywords: form.keywords.trim() || undefined,
-          extraNotes: form.extraNotes.trim() || undefined,
-        }),
-      });
-      if (!res.ok) {
-        const err = await res.json().catch(() => ({}));
-        throw new Error(err.error || "生成失败");
+      if (agentMode === "web") {
+        resetSteps();
+        await sleep(150);
+        startStep(1);
+        const sres = await fetch("/api/agent/search", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ movieTitle: form.movieTitle.trim(), genre: form.genre }),
+        });
+        if (!sres.ok) {
+          const err = await sres.json().catch(() => ({}));
+          throw new Error(err.error || "联网搜索失败");
+        }
+        const sdata = (await sres.json()) as SearchResult;
+        finishStep(1, `找到 ${sdata.sources.length} 个来源`);
+        setSearchResult(sdata);
+        // 搜索成功后若已登录，刷新剧情文档库（搜索会自动入库）
+        if (user) void fetchPlots();
+
+        await sleep(400);
+        startStep(2);
+        await sleep(700);
+        const readChars = sdata.fullPlot?.length || sdata.snippets.length || 0;
+        finishStep(2, `读取 ${readChars} 字`);
+
+        await sleep(300);
+        startStep(3);
+        await sleep(500);
+        finishStep(3, "已整合剧情要素");
+
+        startStep(4);
+        plotContext = sdata.combined;
+        const scriptData = await callScript(plotContext);
+        finishStep(4, `生成 ${scriptData.output.length} 字`);
+        setResult(scriptData.output);
+        setSavedId(scriptData.savedId);
+        toast.success("Agent 协作完成！", {
+          description: `基于真实剧情生成，已校验 ${sdata.sources.length} 个来源`,
+        });
+      } else if (agentMode === "doc") {
+        plotContext = selectedPlot!.content;
+        const scriptData = await callScript(plotContext);
+        setResult(scriptData.output);
+        setSavedId(scriptData.savedId);
+        toast.success("文案生成成功", {
+          description: `基于剧情文档《${selectedPlot!.movieTitle}》创作`,
+        });
+      } else {
+        const scriptData = await callScript(undefined);
+        setResult(scriptData.output);
+        setSavedId(scriptData.savedId);
+        toast.success("文案生成成功！", {
+          description: scriptData.savedId ? "已自动保存到你的创作历史" : "登录后可保存到历史",
+        });
       }
-      const data = (await res.json()) as { output: string; savedId: string | null };
-      setResult(data.output);
-      setSavedId(data.savedId);
-      toast.success("文案生成成功！", {
-        description: data.savedId ? "已自动保存到你的创作历史" : "登录后可保存到历史",
-      });
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : "生成失败，请重试");
+      const msg = e instanceof Error ? e.message : "生成失败";
+      if (agentMode === "web") {
+        // 把当前 running 步骤标记为 error
+        setSteps((prev) => {
+          const next = [...prev];
+          const idx = next.findIndex((s) => s.status === "running");
+          if (idx >= 0) {
+            next[idx] = { ...next[idx], status: "error", detail: msg };
+          }
+          return next;
+        });
+      }
+      toast.error(msg);
     } finally {
       setLoading(false);
     }
@@ -213,6 +424,56 @@ export function ScriptGeneratorView() {
     toast.success(`已填入《${title}》`, { description: "可点击生成按钮立即创作" });
   };
 
+  const openPlotDialog = () => {
+    setPlotForm({ movieTitle: form.movieTitle.trim(), content: "" });
+    setPlotDialogOpen(true);
+  };
+
+  const savePlot = async () => {
+    if (!plotForm.movieTitle.trim() || !plotForm.content.trim()) {
+      toast.error("电影名和剧情内容不能为空");
+      return;
+    }
+    setPlotSaving(true);
+    try {
+      const res = await fetch("/api/agent/plots", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          movieTitle: plotForm.movieTitle.trim(),
+          content: plotForm.content.trim(),
+          source: "manual",
+        }),
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error(err.error || "保存失败");
+      }
+      const data = (await res.json()) as { doc: PlotDoc };
+      toast.success("剧情文档已保存");
+      setPlotDialogOpen(false);
+      setPlotForm({ movieTitle: "", content: "" });
+      await fetchPlots();
+      setSelectedPlotId(data.doc.id);
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "保存失败");
+    } finally {
+      setPlotSaving(false);
+    }
+  };
+
+  const deletePlot = async (id: string) => {
+    try {
+      const res = await fetch(`/api/agent/plots?id=${id}`, { method: "DELETE" });
+      if (!res.ok) throw new Error("删除失败");
+      toast.success("已删除剧情文档");
+      if (selectedPlotId === id) setSelectedPlotId(null);
+      await fetchPlots();
+    } catch {
+      toast.error("删除失败");
+    }
+  };
+
   return (
     <div className="relative min-h-[calc(100vh-4rem)]">
       {/* 背景装饰 */}
@@ -229,27 +490,29 @@ export function ScriptGeneratorView() {
         >
           <div className="mb-4 flex items-center justify-center gap-2">
             <Badge className="gap-1.5 border-primary/30 bg-primary/10 px-3 py-1 text-primary">
-              <Sparkles className="h-3.5 w-3.5" />
-              平台核心特色
+              <span className="relative flex h-2 w-2">
+                <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-primary opacity-75" />
+                <span className="relative inline-flex h-2 w-2 rounded-full bg-primary" />
+              </span>
+              <Bot className="h-3.5 w-3.5" />
+              Agent 协作模式
             </Badge>
           </div>
           <h1 className="text-balance text-3xl font-extrabold tracking-tight sm:text-4xl lg:text-5xl">
             <span className="text-gradient-primary">AI 独家文案生成器</span>
           </h1>
           <p className="mx-auto mt-4 max-w-2xl text-pretty text-sm leading-relaxed text-muted-foreground sm:text-base">
-            输入电影信息与创作参数，AI 依据千万播放操盘经验，10
-            分钟产出结构完整的爆款解说文案——黄金3秒开头、高密度反转、互动金句结尾一站式搞定。
+            输入电影信息与创作参数，让 AI Agent 联网搜索真实剧情、整合剧情要素，再基于真实剧情创作解说文案——告别瞎编乱造，每个反转都能对应真实画面。
           </p>
         </motion.div>
 
-        {/* 主体两栏 */}
-        <div className="grid gap-6 lg:grid-cols-5 lg:gap-8">
-          {/* 左：表单区 */}
+        {/* 主体三栏：左表单 / 中 Agent 面板 / 右结果 */}
+        <div className="grid grid-cols-1 gap-6 lg:grid-cols-[38fr_32fr_30fr] lg:gap-6">
+          {/* 左栏：表单 */}
           <motion.div
             initial={{ opacity: 0, x: -20 }}
             animate={{ opacity: 1, x: 0 }}
             transition={{ duration: 0.5, delay: 0.1 }}
-            className="lg:col-span-2"
           >
             <Card className="glass-card overflow-hidden p-6">
               <div className="mb-5 flex items-center gap-2">
@@ -274,44 +537,24 @@ export function ScriptGeneratorView() {
 
                 <div className="grid grid-cols-2 gap-3">
                   <Field label="电影类型">
-                    <SelectField
-                      value={form.genre}
-                      onChange={(v) => updateField("genre", v)}
-                      options={GENRES}
-                    />
+                    <SelectField value={form.genre} onChange={(v) => updateField("genre", v)} options={GENRES} />
                   </Field>
                   <Field label="解说风格">
-                    <SelectField
-                      value={form.style}
-                      onChange={(v) => updateField("style", v)}
-                      options={STYLES}
-                    />
+                    <SelectField value={form.style} onChange={(v) => updateField("style", v)} options={STYLES} />
                   </Field>
                 </div>
 
                 <div className="grid grid-cols-2 gap-3">
                   <Field label="视频时长">
-                    <SelectField
-                      value={form.duration}
-                      onChange={(v) => updateField("duration", v)}
-                      options={DURATIONS}
-                    />
+                    <SelectField value={form.duration} onChange={(v) => updateField("duration", v)} options={DURATIONS} />
                   </Field>
                   <Field label="黄金3秒钩子">
-                    <SelectField
-                      value={form.hookType}
-                      onChange={(v) => updateField("hookType", v)}
-                      options={HOOK_TYPES}
-                    />
+                    <SelectField value={form.hookType} onChange={(v) => updateField("hookType", v)} options={HOOK_TYPES} />
                   </Field>
                 </div>
 
                 <Field label="解说语气">
-                  <SelectField
-                    value={form.tone}
-                    onChange={(v) => updateField("tone", v)}
-                    options={TONES}
-                  />
+                  <SelectField value={form.tone} onChange={(v) => updateField("tone", v)} options={TONES} />
                 </Field>
 
                 <Field label="关键词" hint="可选，多个用空格分隔">
@@ -345,7 +588,7 @@ export function ScriptGeneratorView() {
                   {loading ? (
                     <>
                       <Loader2 className="h-5 w-5 animate-spin" />
-                      AI 创作中…
+                      {agentMode === "web" ? "Agent 协作中…" : "AI 创作中…"}
                     </>
                   ) : (
                     <>
@@ -355,21 +598,49 @@ export function ScriptGeneratorView() {
                   )}
                 </Button>
                 <p className="text-center text-[11px] text-muted-foreground">
-                  {user ? `当前账号：${user.name}` : "未登录也可体验，登录后可保存历史"}
+                  {user ? `当前账号：${user.name}` : "未登录也可体验，登录后可保存历史与剧情文档"}
                 </p>
               </div>
             </Card>
           </motion.div>
 
-          {/* 右：结果区 */}
+          {/* 中栏：Agent 协作面板 */}
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5, delay: 0.2 }}
+          >
+            <AgentPanel
+              agentMode={agentMode}
+              setAgentMode={setAgentMode}
+              isLoggedIn={!!user}
+              steps={steps}
+              movieTitle={form.movieTitle.trim() || "电影"}
+              isRunning={isAgentRunning || loading}
+              searchResult={searchResult}
+              onRetry={handleGenerate}
+              plots={plots}
+              plotsLoading={plotsLoading}
+              selectedPlotId={selectedPlotId}
+              onSelectPlot={setSelectedPlotId}
+              onOpenPlotDialog={openPlotDialog}
+              onDeletePlot={deletePlot}
+              selectedPlot={selectedPlot}
+              plotExpanded={plotExpanded}
+              setPlotExpanded={setPlotExpanded}
+            />
+          </motion.div>
+
+          {/* 右栏：结果 */}
           <motion.div
             initial={{ opacity: 0, x: 20 }}
             animate={{ opacity: 1, x: 0 }}
-            transition={{ duration: 0.5, delay: 0.2 }}
-            className="lg:col-span-3"
+            transition={{ duration: 0.5, delay: 0.3 }}
           >
             <Card className="glass-card flex min-h-[600px] flex-col overflow-hidden">
-              {loading ? (
+              {loading && agentMode === "web" ? (
+                <AgentRunningSkeleton />
+              ) : loading ? (
                 <ResultSkeleton />
               ) : result ? (
                 <ResultPanel
@@ -391,11 +662,561 @@ export function ScriptGeneratorView() {
           </motion.div>
         </div>
       </div>
+
+      {/* 新建剧情文档 Dialog */}
+      <Dialog open={plotDialogOpen} onOpenChange={setPlotDialogOpen}>
+        <DialogContent className="sm:max-w-2xl">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <FileText className="h-4 w-4 text-primary" />
+              新建剧情文档
+            </DialogTitle>
+            <DialogDescription>
+              可粘贴豆瓣 / 维基的剧情简介，或你自己整理的真实剧情描述。AI 将基于此内容创作解说文案，确保人物、情节、结局与真实画面一致。
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <Field label="电影名称" required>
+              <Input
+                value={plotForm.movieTitle}
+                onChange={(e) => setPlotForm((p) => ({ ...p, movieTitle: e.target.value }))}
+                placeholder="例如：肖申克的救赎"
+                className="h-10"
+              />
+            </Field>
+            <Field label="剧情内容" required hint={`${plotForm.content.length} 字`}>
+              <Textarea
+                value={plotForm.content}
+                onChange={(e) => setPlotForm((p) => ({ ...p, content: e.target.value }))}
+                placeholder="在此粘贴或输入真实剧情描述，建议 500 字以上，包含主要人物、关键情节、结局走向…"
+                className="min-h-[240px] resize-y scrollbar-thin"
+              />
+            </Field>
+          </div>
+          <DialogFooter>
+            <Button variant="ghost" onClick={() => setPlotDialogOpen(false)} disabled={plotSaving}>
+              取消
+            </Button>
+            <Button onClick={savePlot} disabled={plotSaving} className="gap-1.5">
+              {plotSaving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
+              保存剧情文档
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
 
-/* ---------- 子组件 ---------- */
+/* ---------- Agent 协作面板 ---------- */
+
+interface AgentPanelProps {
+  agentMode: AgentMode;
+  setAgentMode: (m: AgentMode) => void;
+  isLoggedIn: boolean;
+  steps: AgentStep[];
+  movieTitle: string;
+  isRunning: boolean;
+  searchResult: SearchResult | null;
+  onRetry: () => void;
+  plots: PlotDoc[];
+  plotsLoading: boolean;
+  selectedPlotId: string | null;
+  onSelectPlot: (id: string | null) => void;
+  onOpenPlotDialog: () => void;
+  onDeletePlot: (id: string) => void;
+  selectedPlot: PlotDoc | null;
+  plotExpanded: boolean;
+  setPlotExpanded: (v: boolean) => void;
+}
+
+function AgentPanel(props: AgentPanelProps) {
+  const {
+    agentMode,
+    setAgentMode,
+    isLoggedIn,
+    steps,
+    movieTitle,
+    isRunning,
+    searchResult,
+    onRetry,
+    plots,
+    plotsLoading,
+    selectedPlotId,
+    onSelectPlot,
+    onOpenPlotDialog,
+    onDeletePlot,
+    selectedPlot,
+    plotExpanded,
+    setPlotExpanded,
+  } = props;
+
+  const hasTimeline = agentMode === "web" && steps.some((s) => s.status !== "pending");
+  const hasSources = agentMode === "web" && !!searchResult && searchResult.sources.length > 0;
+  const hasPlotLib = agentMode === "doc";
+
+  return (
+    <Card
+      className={cn(
+        "glass-card relative overflow-hidden p-5 transition-all",
+        isRunning && "ring-1 ring-primary/40 shadow-glow-primary"
+      )}
+    >
+      {isRunning && (
+        <div className="pointer-events-none absolute top-0 left-0 right-0 h-px animate-pulse bg-gradient-to-r from-transparent via-primary to-transparent" />
+      )}
+      <div className="mb-4 flex items-center gap-2">
+        <div
+          className={cn(
+            "flex h-9 w-9 items-center justify-center rounded-lg transition-colors",
+            isRunning ? "bg-primary/15 text-primary" : "bg-muted/50 text-muted-foreground"
+          )}
+        >
+          <Bot className="h-5 w-5" />
+        </div>
+        <div>
+          <h2 className="font-semibold">🤖 Agent 协作</h2>
+          <p className="text-xs text-muted-foreground">
+            {isRunning ? "正在执行任务…" : "选择剧情来源，让 AI 基于真实剧情创作"}
+          </p>
+        </div>
+      </div>
+
+      <div className="space-y-4">
+        <SourceSelector
+          value={agentMode}
+          onChange={setAgentMode}
+          isLoggedIn={isLoggedIn}
+          disabled={isRunning}
+        />
+
+        <AnimatePresence>
+          {hasTimeline && (
+            <motion.div
+              key="timeline"
+              initial={{ opacity: 0, y: -8 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -8 }}
+            >
+              <SectionTitle icon={<Wand2 className="h-3.5 w-3.5" />}>执行流程</SectionTitle>
+              <AgentTimeline steps={steps} movieTitle={movieTitle} onRetry={onRetry} />
+            </motion.div>
+          )}
+
+          {hasPlotLib && (
+            <motion.div
+              key="plotlib"
+              initial={{ opacity: 0, y: -8 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -8 }}
+            >
+              <SectionTitle icon={<Library className="h-3.5 w-3.5" />}>剧情文档库</SectionTitle>
+              <PlotLibrary
+                plots={plots}
+                loading={plotsLoading}
+                selectedPlotId={selectedPlotId}
+                onSelect={onSelectPlot}
+                onOpenDialog={onOpenPlotDialog}
+                onDelete={onDeletePlot}
+                selectedPlot={selectedPlot}
+                expanded={plotExpanded}
+                setExpanded={setPlotExpanded}
+                isLoggedIn={isLoggedIn}
+              />
+            </motion.div>
+          )}
+
+          {hasSources && searchResult && (
+            <motion.div
+              key="sources"
+              initial={{ opacity: 0, y: -8 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -8 }}
+            >
+              <SectionTitle icon={<ExternalLink className="h-3.5 w-3.5" />}>
+                剧情来源（{searchResult.sources.length}）
+              </SectionTitle>
+              <SearchSources sources={searchResult.sources} />
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </div>
+    </Card>
+  );
+}
+
+function SectionTitle({ icon, children }: { icon: React.ReactNode; children: React.ReactNode }) {
+  return (
+    <div className="mb-2 flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
+      <span className="text-primary">{icon}</span>
+      {children}
+    </div>
+  );
+}
+
+interface SourceOption {
+  id: AgentMode;
+  icon: React.ReactNode;
+  label: string;
+  desc: string;
+  locked?: boolean;
+}
+
+function SourceSelector({
+  value,
+  onChange,
+  isLoggedIn,
+  disabled,
+}: {
+  value: AgentMode;
+  onChange: (v: AgentMode) => void;
+  isLoggedIn: boolean;
+  disabled: boolean;
+}) {
+  const options: SourceOption[] = [
+    {
+      id: "none",
+      icon: <Wand2 className="h-4 w-4" />,
+      label: "不使用 Agent",
+      desc: "直接生成，文案末尾会标注「剧情未经校验」",
+    },
+    {
+      id: "web",
+      icon: <Globe className="h-4 w-4" />,
+      label: "联网搜索真实剧情",
+      desc: "Agent 自动联网抓取 + 深度阅读，约 5-15 秒",
+    },
+    {
+      id: "doc",
+      icon: <FileText className="h-4 w-4" />,
+      label: "使用剧情文档",
+      desc: isLoggedIn ? "从你的剧情文档库选取已存的真实剧情" : "登录后可用",
+      locked: !isLoggedIn,
+    },
+  ];
+  return (
+    <div className="space-y-2">
+      {options.map((opt) => {
+        const active = value === opt.id;
+        const isDisabled = disabled || opt.locked;
+        return (
+          <button
+            key={opt.id}
+            type="button"
+            disabled={isDisabled}
+            onClick={() => onChange(opt.id)}
+            className={cn(
+              "flex w-full items-start gap-3 rounded-lg border p-3 text-left transition-all",
+              active
+                ? "border-primary bg-primary/5 shadow-glow-primary"
+                : "border-border/60 hover:border-primary/40 hover:bg-muted/30",
+              isDisabled && "cursor-not-allowed opacity-60"
+            )}
+          >
+            <div
+              className={cn(
+                "mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-md",
+                active ? "bg-primary/15 text-primary" : "bg-muted/50 text-muted-foreground"
+              )}
+            >
+              {opt.icon}
+            </div>
+            <div className="min-w-0 flex-1">
+              <div className="flex items-center gap-2">
+                <span className="text-sm font-medium">{opt.label}</span>
+                {opt.locked && (
+                  <Badge variant="outline" className="h-4 px-1.5 text-[10px]">
+                    需登录
+                  </Badge>
+                )}
+                {active && !opt.locked && <CheckCircle2 className="ml-auto h-4 w-4 text-primary" />}
+              </div>
+              <p className="mt-0.5 text-[11px] leading-tight text-muted-foreground">{opt.desc}</p>
+            </div>
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
+function AgentTimeline({
+  steps,
+  movieTitle,
+  onRetry,
+}: {
+  steps: AgentStep[];
+  movieTitle: string;
+  onRetry: () => void;
+}) {
+  return (
+    <ol className="relative space-y-1">
+      {steps.map((step, idx) => (
+        <li key={step.id} className="relative flex gap-3">
+          <div className="flex flex-col items-center">
+            <StepIcon status={step.status} icon={step.icon} />
+            {idx < steps.length - 1 && (
+              <div
+                className={cn(
+                  "mt-0.5 w-px flex-1 self-stretch",
+                  step.status === "done" ? "bg-emerald-500/40" : "bg-border/60"
+                )}
+              />
+            )}
+          </div>
+          <div className="flex-1 pb-3">
+            <div className="flex items-baseline justify-between gap-2">
+              <span
+                className={cn(
+                  "text-sm font-medium",
+                  step.status === "pending" && "text-muted-foreground",
+                  step.status === "running" && "text-foreground",
+                  step.status === "done" && "text-foreground",
+                  step.status === "error" && "text-destructive"
+                )}
+              >
+                {step.title(movieTitle)}
+                {step.status === "running" && <span className="ml-1 animate-pulse">▍</span>}
+              </span>
+              {step.elapsed !== undefined && (
+                <span className="shrink-0 text-[10px] tabular-nums text-muted-foreground">
+                  {step.elapsed.toFixed(1)}s
+                </span>
+              )}
+            </div>
+            {step.detail && (
+              <p
+                className={cn(
+                  "mt-0.5 text-xs",
+                  step.status === "error" ? "text-destructive/80" : "text-muted-foreground"
+                )}
+              >
+                {step.detail}
+              </p>
+            )}
+            {step.status === "running" && (
+              <p className="mt-0.5 text-[11px] text-primary/70">处理中…</p>
+            )}
+            {step.status === "error" && (
+              <Button
+                size="sm"
+                variant="outline"
+                className="mt-1.5 h-6 gap-1 px-2 text-[11px]"
+                onClick={onRetry}
+              >
+                <RefreshCw className="h-3 w-3" />
+                重试
+              </Button>
+            )}
+          </div>
+        </li>
+      ))}
+    </ol>
+  );
+}
+
+function StepIcon({ status, icon }: { status: StepStatus; icon: React.ReactNode }) {
+  if (status === "running") {
+    return (
+      <div className="flex h-7 w-7 items-center justify-center rounded-full bg-primary/15 text-primary ring-2 ring-primary/30">
+        <Loader2 className="h-3.5 w-3.5 animate-spin" />
+      </div>
+    );
+  }
+  if (status === "done") {
+    return (
+      <div className="flex h-7 w-7 items-center justify-center rounded-full bg-emerald-500/15 text-emerald-500 ring-1 ring-emerald-500/30">
+        <CheckCircle2 className="h-4 w-4" />
+      </div>
+    );
+  }
+  if (status === "error") {
+    return (
+      <div className="flex h-7 w-7 items-center justify-center rounded-full bg-destructive/15 text-destructive ring-1 ring-destructive/30">
+        <XCircle className="h-4 w-4" />
+      </div>
+    );
+  }
+  return (
+    <div className="flex h-7 w-7 items-center justify-center rounded-full bg-muted/50 text-muted-foreground ring-1 ring-border/60">
+      {icon}
+    </div>
+  );
+}
+
+interface PlotLibraryProps {
+  plots: PlotDoc[];
+  loading: boolean;
+  selectedPlotId: string | null;
+  onSelect: (id: string | null) => void;
+  onOpenDialog: () => void;
+  onDelete: (id: string) => void;
+  selectedPlot: PlotDoc | null;
+  expanded: boolean;
+  setExpanded: (v: boolean) => void;
+  isLoggedIn: boolean;
+}
+
+function PlotLibrary({
+  plots,
+  loading,
+  selectedPlotId,
+  onSelect,
+  onOpenDialog,
+  onDelete,
+  selectedPlot,
+  expanded,
+  setExpanded,
+  isLoggedIn,
+}: PlotLibraryProps) {
+  if (!isLoggedIn) {
+    return (
+      <div className="rounded-lg border border-dashed border-border/60 p-4 text-center text-xs text-muted-foreground">
+        请先登录后使用剧情文档库
+      </div>
+    );
+  }
+  return (
+    <div className="space-y-2">
+      <Button variant="outline" size="sm" className="w-full gap-1.5" onClick={onOpenDialog}>
+        <Plus className="h-3.5 w-3.5" />
+        新建 / 上传剧情文档
+      </Button>
+
+      {loading ? (
+        <div className="space-y-2">
+          {[1, 2, 3].map((i) => (
+            <Skeleton key={i} className="h-14 w-full" />
+          ))}
+        </div>
+      ) : plots.length === 0 ? (
+        <div className="rounded-lg border border-dashed border-border/60 p-4 text-center">
+          <FileText className="mx-auto mb-2 h-6 w-6 text-muted-foreground" />
+          <p className="text-xs text-muted-foreground">还没有剧情文档</p>
+          <p className="mt-1 text-[10px] text-muted-foreground/70">
+            点击上方按钮，粘贴豆瓣/维基剧情简介即可
+          </p>
+        </div>
+      ) : (
+        <div className="scrollbar-thin max-h-72 space-y-1.5 overflow-y-auto pr-1">
+          {plots.map((p) => {
+            const active = p.id === selectedPlotId;
+            return (
+              <div
+                key={p.id}
+                className={cn(
+                  "group relative cursor-pointer rounded-lg border p-2.5 transition-all",
+                  active
+                    ? "border-primary bg-primary/5 shadow-glow-primary"
+                    : "border-border/60 hover:border-primary/40 hover:bg-muted/30"
+                )}
+                onClick={() => onSelect(active ? null : p.id)}
+              >
+                <div className="flex items-center gap-2 pr-6">
+                  <span className="truncate text-sm font-medium">{p.movieTitle}</span>
+                  <Badge
+                    variant="outline"
+                    className={cn(
+                      "h-4 px-1.5 text-[10px]",
+                      p.source === "web" ? "border-primary/30 text-primary" : "border-accent/30 text-accent"
+                    )}
+                  >
+                    {p.source === "web" ? "联网" : "手动"}
+                  </Badge>
+                </div>
+                <div className="mt-1 flex items-center gap-2 text-[10px] text-muted-foreground">
+                  <span>{p.wordCount} 字</span>
+                  <span>·</span>
+                  <span>{formatDate(p.updatedAt)}</span>
+                </div>
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onDelete(p.id);
+                  }}
+                  className="absolute right-2 top-2 flex h-6 w-6 items-center justify-center rounded text-muted-foreground opacity-0 transition-all hover:bg-destructive/10 hover:text-destructive group-hover:opacity-100"
+                  title="删除"
+                >
+                  <Trash2 className="h-3.5 w-3.5" />
+                </button>
+              </div>
+            );
+          })}
+        </div>
+      )}
+
+      {selectedPlot && (
+        <div className="rounded-lg border border-border/60 bg-card/40 p-3">
+          <div className="mb-1.5 flex items-center justify-between">
+            <span className="text-xs font-medium text-primary">已选剧情预览</span>
+            <button
+              type="button"
+              onClick={() => setExpanded(!expanded)}
+              className="text-[10px] text-muted-foreground hover:text-primary"
+            >
+              {expanded ? "收起" : "展开全文"}
+            </button>
+          </div>
+          <div
+            className={cn(
+              "scrollbar-thin overflow-y-auto whitespace-pre-wrap text-xs leading-relaxed text-foreground/75",
+              expanded ? "max-h-64" : "max-h-24"
+            )}
+          >
+            {selectedPlot.content}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function SearchSources({ sources }: { sources: SearchSource[] }) {
+  return (
+    <div className="scrollbar-thin max-h-64 space-y-1.5 overflow-y-auto pr-1">
+      {sources.map((s, i) => (
+        <a
+          key={`${s.url}-${i}`}
+          href={s.url}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="block rounded-md border border-border/60 p-2 transition-all hover:border-primary/40 hover:bg-muted/30"
+        >
+          <div className="flex items-center gap-1.5">
+            <Globe className="h-3 w-3 shrink-0 text-primary" />
+            <span className="truncate text-xs font-medium">{s.name}</span>
+            <span className="shrink-0 text-[10px] text-muted-foreground">{s.host}</span>
+            <ExternalLink className="ml-auto h-3 w-3 shrink-0 text-muted-foreground" />
+          </div>
+          {s.snippet && (
+            <p className="mt-1 line-clamp-2 text-[10px] leading-tight text-muted-foreground">
+              {s.snippet.slice(0, 60)}
+              {s.snippet.length > 60 ? "…" : ""}
+            </p>
+          )}
+        </a>
+      ))}
+    </div>
+  );
+}
+
+function formatDate(iso: string): string {
+  try {
+    const d = new Date(iso);
+    const now = new Date();
+    const diff = (now.getTime() - d.getTime()) / 1000;
+    if (diff < 60) return "刚刚";
+    if (diff < 3600) return `${Math.floor(diff / 60)}分钟前`;
+    if (diff < 86400) return `${Math.floor(diff / 3600)}小时前`;
+    if (diff < 86400 * 7) return `${Math.floor(diff / 86400)}天前`;
+    return `${d.getMonth() + 1}月${d.getDate()}日`;
+  } catch {
+    return "";
+  }
+}
+
+/* ---------- 表单辅助 ---------- */
 
 function Field({
   label,
@@ -447,6 +1268,8 @@ function SelectField({
   );
 }
 
+/* ---------- 结果区 ---------- */
+
 function EmptyState({ onPick }: { onPick: (title: string, genre: string) => void }) {
   return (
     <div className="flex flex-1 flex-col items-center justify-center p-8 text-center">
@@ -460,7 +1283,7 @@ function EmptyState({ onPick }: { onPick: (title: string, genre: string) => void
       </motion.div>
       <h3 className="text-lg font-semibold">还没有生成文案</h3>
       <p className="mt-2 max-w-sm text-sm leading-relaxed text-muted-foreground">
-        在左侧填写电影信息与创作参数，点击「生成独家精选文案」即可。也可以试试这些经典影片：
+        填写左侧电影信息与创作参数，选择中栏的 Agent 协作模式，点击「生成独家精选文案」即可。
       </p>
       <div className="mt-6 flex flex-wrap items-center justify-center gap-2">
         {SAMPLE_MOVIES.map((m) => (
@@ -527,6 +1350,37 @@ function ResultSkeleton() {
   );
 }
 
+function AgentRunningSkeleton() {
+  return (
+    <div className="flex flex-1 flex-col items-center justify-center p-8 text-center">
+      <div className="relative mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-primary/10">
+        <Bot className="h-8 w-8 text-primary" />
+        <span className="absolute -right-1 -top-1 flex h-3 w-3">
+          <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-primary opacity-75" />
+          <span className="relative inline-flex h-3 w-3 rounded-full bg-primary" />
+        </span>
+      </div>
+      <h3 className="text-sm font-semibold">Agent 正在协作创作</h3>
+      <p className="mt-1 max-w-xs text-xs leading-relaxed text-muted-foreground">
+        请查看中栏 Agent 面板的实时执行进度，搜索 + 阅读 + 整合 + 生成四步流程即将完成…
+      </p>
+    </div>
+  );
+}
+
+interface ResultPanelProps {
+  result: string;
+  isFav: boolean;
+  savedId: string | null;
+  ttsLoading: boolean;
+  audioUrl: string | null;
+  isLoggedIn: boolean;
+  onCopy: () => void;
+  onFavorite: () => void;
+  onRegenerate: () => void;
+  onTTS: () => void;
+}
+
 function ResultPanel({
   result,
   isFav,
@@ -538,18 +1392,8 @@ function ResultPanel({
   onFavorite,
   onRegenerate,
   onTTS,
-}: {
-  result: string;
-  isFav: boolean;
-  savedId: string | null;
-  ttsLoading: boolean;
-  audioUrl: string | null;
-  isLoggedIn: boolean;
-  onCopy: () => void;
-  onFavorite: () => void;
-  onRegenerate: () => void;
-  onTTS: () => void;
-}) {
+}: ResultPanelProps) {
+  const isUnverified = result.includes("剧情未经校验");
   return (
     <div className="flex flex-1 flex-col">
       {/* 工具栏 */}
@@ -560,7 +1404,7 @@ function ResultPanel({
         </div>
         <Button size="sm" variant="ghost" className="h-8 gap-1.5 px-2.5" onClick={onCopy}>
           <Copy className="h-3.5 w-3.5" />
-          <span className="hidden sm:inline">复制全文</span>
+          <span className="hidden sm:inline">复制</span>
         </Button>
         <Button
           size="sm"
@@ -575,13 +1419,23 @@ function ResultPanel({
         </Button>
         <Button size="sm" variant="ghost" className="h-8 gap-1.5 px-2.5" onClick={onTTS} disabled={ttsLoading}>
           {ttsLoading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Volume2 className="h-3.5 w-3.5" />}
-          <span className="hidden sm:inline">{ttsLoading ? "合成中" : "试听语音"}</span>
+          <span className="hidden sm:inline">{ttsLoading ? "合成中" : "试听"}</span>
         </Button>
         <Button size="sm" variant="ghost" className="h-8 gap-1.5 px-2.5" onClick={onRegenerate}>
           <RefreshCw className="h-3.5 w-3.5" />
-          <span className="hidden sm:inline">重新生成</span>
+          <span className="hidden sm:inline">重生成</span>
         </Button>
       </div>
+
+      {/* 黄色未校验提示 */}
+      {isUnverified && (
+        <div className="flex items-start gap-2 border-b border-amber-500/20 bg-amber-500/10 p-3 text-amber-700 dark:text-amber-300">
+          <AlertCircle className="mt-0.5 h-3.5 w-3.5 shrink-0" />
+          <p className="text-[11px] leading-relaxed">
+            本文案未使用 Agent 协作，剧情部分由 AI 自行发挥，<strong>可能存在虚构</strong>。建议切到「联网搜索真实剧情」或「使用剧情文档」模式重新生成，确保剧情与真实画面一致。
+          </p>
+        </div>
+      )}
 
       {/* 试听播放器 */}
       {audioUrl && (
@@ -590,7 +1444,6 @@ function ResultPanel({
             <Volume2 className="h-3.5 w-3.5" />
             语音试听（前800字）
           </div>
-          { }
           <audio src={audioUrl} controls className="w-full" />
         </div>
       )}

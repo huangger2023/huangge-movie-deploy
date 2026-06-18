@@ -22,6 +22,7 @@ export async function POST(req: NextRequest) {
       tone: body.tone || "犀利",
       keywords: body.keywords,
       extraNotes: body.extraNotes,
+      plotContext: body.plotContext,
     });
 
     const user = await getCurrentUser();

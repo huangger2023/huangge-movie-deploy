@@ -19,6 +19,7 @@ export interface ScriptGenInput {
   tone: string; // 语气: 犀利 / 温暖 / 幽默 / 神秘 / 激情
   keywords?: string;
   extraNotes?: string;
+  plotContext?: string; // Agent 协作：真实剧情参考（来自联网搜索或上传文档）
 }
 
 /**
@@ -32,9 +33,18 @@ export async function generateNarrationScript(input: ScriptGenInput) {
 2. 全程口语化、节奏快、信息密度高，每句话都推动剧情或情绪
 3. 善用"没想到""万万没想到""就在这时"等转折词制造爽感
 4. 结尾要么情感升华金句，要么留悬念引导互动
-5. 精准控制在指定时长内（按每分钟约220字估算）`;
+5. 精准控制在指定时长内（按每分钟约220字估算）
+
+【最重要原则】如果提供了"真实剧情参考"，你必须严格基于该真实剧情创作，**绝对不得虚构、捏造、添加任何未在参考中出现的情节、人物、对话或结局**。解说可以浓缩、可以重组、可以强化情绪，但事实层面必须忠于真实剧情——这是为了让创作者能据此剪辑对应画面，瞎编会导致无法剪辑。`;
 
   const userPrompt = `请为电影《${input.movieTitle}》创作一条抖音电影解说短视频文案。
+
+${input.plotContext && input.plotContext.trim().length > 0 ? `【真实剧情参考（Agent 协作提供，务必忠于事实，禁止虚构）】
+"""
+${input.plotContext.trim().slice(0, 4000)}
+"""
+
+⚠️ 以上是经联网搜索/文档读取获得的真实剧情，你的正文解说必须基于此真实剧情，不得添加任何未提及的情节、人物、反转或结局。可以浓缩、可以强化情绪、可以调整叙事顺序，但事实层面必须 100% 忠实。` : `（未提供真实剧情参考，请基于你对该电影的了解创作，但请在文案末尾用一行小字标注：⚠️ 本文案剧情未经真实剧情校验，剪辑前请核实）`}
 
 【创作参数】
 - 类型：${input.genre}
@@ -179,8 +189,107 @@ ${params.content}
 }
 
 /**
- * TTS 语音试听
+ * Agent 协作：联网搜索电影真实剧情
+ * 用 web_search 找到剧情简介来源，再用 web_reader 读取全文，拼成 plotContext
  */
+export interface PlotSearchResult {
+  movieTitle: string;
+  snippets: string; // 搜索摘要拼接
+  fullPlot: string; // 深度读取的全文（可能为空）
+  combined: string; // snippets + fullPlot 去重拼接，供 LLM 用
+  sources: { name: string; url: string; host: string; snippet: string }[];
+  searchedAt: string;
+}
+
+export async function searchMoviePlot(
+  movieTitle: string,
+  genre?: string
+): Promise<PlotSearchResult> {
+  const zai = await getZAI();
+  const query = `${movieTitle} 电影 剧情简介 详细 结局 解析`;
+  const results = (await zai.functions.invoke("web_search", {
+    query,
+    num: 6,
+  })) as Array<{
+    url: string;
+    name: string;
+    snippet: string;
+    host_name: string;
+  }>;
+
+  const sources = results.map((r) => ({
+    name: r.name,
+    url: r.url,
+    host: r.host_name,
+    snippet: r.snippet,
+  }));
+
+  const snippets = results
+    .map((r, i) => `【来源${i + 1}：${r.name}（${r.host_name}）】\n${r.snippet}`)
+    .join("\n\n");
+
+  // 深度读取：优先选剧情类来源（百度百科/知乎/豆瓣等中文站），读取全文
+  let fullPlot = "";
+  const plotHosts = [
+    "baike.baidu",
+    "zhuanlan.zhihu",
+    "douban",
+    "movie.douban",
+    "zhihu",
+    "sohu",
+    "163.com",
+    "sina",
+  ];
+  const ranked = [...results].sort((a, b) => {
+    const aScore = plotHosts.some((h) => a.host_name.includes(h)) ? 0 : 1;
+    const bScore = plotHosts.some((h) => b.host_name.includes(h)) ? 0 : 1;
+    return aScore - bScore;
+  });
+  const readCandidates = ranked.slice(0, 2);
+  for (const r of readCandidates) {
+    try {
+      const read = (await zai.functions.invoke("page_reader", {
+        url: r.url,
+      })) as {
+        code: number;
+        data?: { html?: string; title?: string; content?: string };
+      };
+      const rawText = read?.data?.html || read?.data?.content || "";
+      const text = rawText
+        .replace(/<script[\s\S]*?<\/script>/gi, "")
+        .replace(/<style[\s\S]*?<\/style>/gi, "")
+        .replace(/<[^>]+>/g, " ")
+        .replace(/&nbsp;/g, " ")
+        .replace(/&amp;/g, "&")
+        .replace(/&lt;/g, "<")
+        .replace(/&gt;/g, ">")
+        .replace(/\s+/g, " ")
+        .trim();
+      if (text && text.length > 300) {
+        fullPlot += `【深度读取：${r.name}】\n${text.slice(0, 2500)}\n\n`;
+      }
+    } catch {
+      // page_reader 失败则跳过，用 snippets 兜底
+    }
+  }
+
+  const combined = [
+    fullPlot ? `=== 深度读取全文 ===\n${fullPlot}` : "",
+    `=== 搜索摘要 ===\n${snippets}`,
+  ]
+    .filter(Boolean)
+    .join("\n\n");
+
+  return {
+    movieTitle,
+    snippets,
+    fullPlot,
+    combined,
+    sources,
+    searchedAt: new Date().toISOString(),
+  };
+}
+
 export async function generateTTS(params: {
   text: string;
   voice?: string;
