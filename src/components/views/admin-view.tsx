@@ -1496,14 +1496,14 @@ function StudentsTab({ courses }: { courses: AdminCourse[] }) {
   const [stats, setStats] = React.useState<StudentsStats | null>(null);
   const [loading, setLoading] = React.useState(true);
   const [search, setSearch] = React.useState("");
-  const [courseFilter, setCourseFilter] = React.useState("");
+  const [courseFilter, setCourseFilter] = React.useState("all");
 
   const fetchStudents = React.useCallback(async () => {
     setLoading(true);
     try {
       const params = new URLSearchParams();
       if (search.trim()) params.set("search", search.trim());
-      if (courseFilter) params.set("courseId", courseFilter);
+      if (courseFilter && courseFilter !== "all") params.set("courseId", courseFilter);
       const res = await fetch(`/api/admin/students?${params.toString()}`);
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "加载失败");
@@ -1600,7 +1600,7 @@ function StudentsTab({ courses }: { courses: AdminCourse[] }) {
               <SelectValue placeholder="全部课程" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="">全部课程</SelectItem>
+              <SelectItem value="all">全部课程</SelectItem>
               {courses.map((c) => (
                 <SelectItem key={c.id} value={c.id}>
                   {c.title}
@@ -1616,7 +1616,7 @@ function StudentsTab({ courses }: { courses: AdminCourse[] }) {
         <div className="border-b px-5 py-4">
           <h3 className="text-base font-semibold">学员列表</h3>
           <p className="text-xs text-muted-foreground">
-            共 {students.length} 位学员{courseFilter ? "（已按课程筛选）" : ""}
+            共 {students.length} 位学员{courseFilter && courseFilter !== "all" ? "（已按课程筛选）" : ""}
           </p>
         </div>
         {loading ? (
