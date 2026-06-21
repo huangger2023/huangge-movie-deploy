@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getZAI } from "@/lib/ai";
+import { getZAI, getActiveAiModel, chatCompletionRaw } from "@/lib/ai";
 import { getCurrentUser } from "@/lib/auth";
 import { db } from "@/lib/db";
 
@@ -42,8 +42,7 @@ export async function POST(req: NextRequest) {
       history = rows.map((r) => ({ role: r.role, content: r.content }));
     }
 
-    const zai = await getZAI();
-    const systemPrompt = `你是「影述学院」的课程 AI 助教，专门帮助学员理解电影解说创作课程内容。
+    const systemPrompt = `你是「荒哥说电影」的课程 AI 助教，专门帮助学员理解电影解说创作课程内容。
 
 当前学习上下文：
 - 课程：《${courseTitle || "电影解说课程"}》
@@ -62,20 +61,32 @@ ${lessonContent.slice(0, 3000)}
 6. 回答控制在 300 字以内，重点突出，可用分点或短段落
 7. 如果学员问实操问题，尽量给出可执行的具体步骤`;
 
-    const messages: { role: string; content: string }[] = [
-      { role: "assistant", content: systemPrompt },
-    ];
+    const historyMessages: { role: "user" | "assistant"; content: string }[] = [];
     for (const m of history.slice(-6)) {
-      messages.push({ role: m.role, content: m.content });
+      historyMessages.push({ role: m.role as "user" | "assistant", content: m.content });
     }
-    messages.push({ role: "user", content: question.trim() });
+    historyMessages.push({ role: "user", content: question.trim() });
 
-    const completion = await zai.chat.completions.create({
-      messages: messages as { role: "user" | "assistant"; content: string }[],
-      thinking: { type: "disabled" },
-    });
-
-    const answer = completion.choices[0]?.message?.content ?? "";
+    // 优先使用管理员配置的自定义模型（OpenAI 兼容端点，system 角色）
+    const cfg = await getActiveAiModel();
+    let answer: string;
+    if (cfg) {
+      answer = await chatCompletionRaw(
+        [{ role: "system", content: systemPrompt }, ...historyMessages],
+        cfg
+      );
+    } else {
+      // 无自定义模型配置时回退到智谱 SDK（沿用原行为）
+      const zai = await getZAI();
+      const completion = await zai.chat.completions.create({
+        messages: [
+          { role: "assistant", content: systemPrompt },
+          ...historyMessages,
+        ],
+        thinking: { type: "disabled" },
+      });
+      answer = completion.choices[0]?.message?.content ?? "";
+    }
 
     // 持久化用户提问 + AI 回答
     if (user && lessonId) {

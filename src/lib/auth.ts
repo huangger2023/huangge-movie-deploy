@@ -1,5 +1,6 @@
 import "server-only";
 import { cookies } from "next/headers";
+import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
 
 export const SESSION_COOKIE = "ys_session";
@@ -36,4 +37,19 @@ export async function setSession(userId: string) {
 export async function clearSession() {
   const cookieStore = await cookies();
   cookieStore.delete(SESSION_COOKIE);
+}
+
+/**
+ * 管理员鉴权 helper：封装 getCurrentUser() + role 校验。
+ * 成功返回 { user }，失败返回 { error: 403 Response }，调用方直接 return result.error。
+ */
+export async function requireAdmin() {
+  const user = await getCurrentUser();
+  if (!user || user.role !== "ADMIN") {
+    return {
+      user: null,
+      error: NextResponse.json({ error: "无权限" }, { status: 403 }),
+    };
+  }
+  return { user, error: null };
 }

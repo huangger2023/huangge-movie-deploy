@@ -96,6 +96,7 @@ model Enrollment {
   id            String    @id @default(cuid())
   userId        String
   courseId      String
+  status        String    @default("pending") // pending | approved | rejected
   progress      Float     @default(0) // 0-100
   lastLessonId  String?
   enrolledAt    DateTime  @default(now())
@@ -189,4 +190,18 @@ model Workspace {
 
   @@index([userId, updatedAt])
   @@index([userId, status])
+}
+
+// AI 模型配置：管理员可自由添加 OpenAI 兼容端点的模型，设其一为默认全局使用
+// TTS 与联网搜索仍走智谱 SDK，不受此表影响
+model AiModel {
+  id        String   @id @default(cuid())
+  name      String   // 显示名，后台列表区分用
+  baseUrl   String   // OpenAI 兼容端点，如 https://open.bigmodel.cn/api/paas/v4
+  apiKey    String   // API Key，明文存（与项目现有密码风格一致），UI 隐藏输入、列表脱敏
+  model     String   // 模型名，如 glm-4-flash
+  isDefault Boolean  @default(false) // 默认模型（全局唯一）
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }

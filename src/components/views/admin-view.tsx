@@ -11,7 +11,6 @@ import {
   Loader2,
   Crown,
   Users,
-  DollarSign,
   BookOpen,
   AlertTriangle,
   ArrowLeft,
@@ -21,11 +20,10 @@ import {
   ChevronUp,
   ChevronDown,
   BarChart3,
-  TrendingUp,
-  Wallet,
+  ClipboardCheck,
   Activity,
-  GraduationCap,
   Layers,
+  GraduationCap,
   BookCheck,
   Search,
   Cloud,
@@ -40,6 +38,10 @@ import {
   Code,
   Link as LinkIcon,
   Minus,
+  Cpu,
+  KeyRound,
+  Eye,
+  EyeOff,
 } from "lucide-react";
 import { useAppStore } from "@/lib/store";
 import { toast } from "sonner";
@@ -212,7 +214,7 @@ function formToBody(form: CourseFormState) {
       : null,
     isFree: form.isFree,
     isFeatured: form.isFeatured,
-    instructor: form.instructor.trim() || "影述学院导师",
+    instructor: form.instructor.trim() || "荒哥说电影导师",
     instructorBio: form.instructorBio.trim() || null,
     tags: form.tags
       .split(/[，,]/)
@@ -261,36 +263,34 @@ export function AdminView() {
     }
   }, [user, fetchCourses]);
 
-  // 权限校验
   if (!user || user.role !== "ADMIN") {
     return (
       <div className="relative min-h-[70vh] overflow-hidden">
-        <div className="absolute inset-0 bg-cinema-radial" />
-        <div className="relative mx-auto flex max-w-md flex-col items-center justify-center px-4 py-20 text-center">
-          <motion.div
-            initial={{ opacity: 0, scale: 0.9 }}
-            animate={{ opacity: 1, scale: 1 }}
-            transition={{ duration: 0.4 }}
-            className="mb-6 flex h-20 w-20 items-center justify-center rounded-full bg-destructive/15 text-destructive"
-          >
-            <ShieldCheck className="h-10 w-10" />
-          </motion.div>
-          <h2 className="mb-2 text-2xl font-bold">无访问权限</h2>
-          <p className="mb-6 text-sm text-muted-foreground">
-            该页面仅限管理员访问，请使用管理员账号登录后重试
+        <div className="absolute inset-0 spotlight-soft opacity-60" />
+        <div className="absolute inset-0 code-bg opacity-40" />
+        <div className="container-page relative flex flex-col items-center justify-center pt-24 pb-20 text-center">
+          <div className="font-mono text-[11px] uppercase tracking-[0.12em] text-destructive">
+            / admin · 403 · forbidden
+          </div>
+          <h2 className="font-display mt-3 text-balance text-[36px] font-extrabold leading-[1.05] tracking-[-0.025em] sm:text-[48px]">
+            无访问权限
+          </h2>
+          <p className="mt-3 max-w-md text-[14px] leading-relaxed text-muted-foreground">
+            该页面仅限管理员访问，请使用管理员账号登录后重试。
           </p>
-          <div className="flex gap-2">
+          <div className="mt-8 flex gap-2">
             <Button
               variant="outline"
               onClick={() => setView("home")}
+              className="rounded-[2px] font-mono text-[12px] uppercase tracking-[0.08em]"
             >
-              <ArrowLeft className="mr-1.5 h-4 w-4" />
+              <ArrowLeft className="mr-1.5 h-3.5 w-3.5" />
               返回首页
             </Button>
             {!user && (
               <Button
                 onClick={() => setView("auth")}
-                className="bg-gradient-to-r from-primary to-accent text-primary-foreground"
+                className="rounded-[2px] font-mono text-[12px] uppercase tracking-[0.08em]"
               >
                 去登录
               </Button>
@@ -301,16 +301,7 @@ export function AdminView() {
     );
   }
 
-  const totalStudents = courses.reduce(
-    (sum, c) => sum + (c.studentsCount || 0),
-    0
-  );
-  const totalRevenue = courses.reduce(
-    (sum, c) => sum + (c.isFree ? 0 : (c.price || 0) * (c.studentsCount || 0)),
-    0
-  );
-
-  const openCreate = () => {
+      const openCreate = () => {
     setForm(EMPTY_FORM);
     setEditingId(null);
     setDialogOpen(true);
@@ -391,110 +382,115 @@ export function AdminView() {
     },
     {
       icon: Users,
-      label: "累计学员",
-      value: totalStudents.toLocaleString(),
+      label: "学员总数",
+      value: "—",
       tint: "bg-amber-500/10 text-amber-500",
     },
     {
-      icon: DollarSign,
-      label: "收入估算",
-      value: `¥${totalRevenue.toLocaleString()}`,
-      tint: "bg-emerald-500/10 text-emerald-500",
+      icon: Layers,
+      label: "课时总数",
+      value: String(courses.reduce((s, c) => s + (c._count?.lessons ?? 0), 0)),
+      tint: "bg-violet-500/10 text-violet-500",
     },
   ];
 
   return (
     <div className="relative min-h-[70vh]">
-      <div className="absolute inset-x-0 top-0 h-48 bg-cinema-radial" />
-      <div className="relative mx-auto max-w-7xl px-4 py-10 sm:px-6 lg:px-8 lg:py-14">
-        {/* Header */}
+      <div className="absolute inset-x-0 top-0 h-64 spotlight-soft opacity-50" />
+      <div className="absolute inset-0 code-bg opacity-40" />
+      <div className="container-page relative pt-12 pb-20 lg:pt-16">
+        {/* —— 页头 —— */}
         <motion.div
-          initial={{ opacity: 0, y: 20 }}
+          initial={{ opacity: 0, y: 12 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.4 }}
-          className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between"
+          className="flex flex-col gap-5 sm:flex-row sm:items-end sm:justify-between"
         >
           <div>
-            <div className="mb-2 flex items-center gap-2">
-              <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-primary to-accent shadow-glow-primary">
-                <ShieldCheck className="h-5 w-5 text-primary-foreground" />
-              </div>
-              <Badge className="bg-accent text-accent-foreground">
-                <Crown className="mr-1 h-3 w-3" />
-                管理员
-              </Badge>
+            <div className="font-mono text-[11px] uppercase tracking-[0.12em] text-amber-500 dark:text-amber-400">
+              / admin · ROLE = ADMIN
             </div>
-            <h1 className="text-2xl font-bold tracking-tight sm:text-3xl">
-              管理后台 · 课程管理
+            <h1 className="font-display mt-3 text-balance text-[36px] font-extrabold leading-[1.05] tracking-[-0.025em] sm:text-[52px]">
+              管理后台
             </h1>
-            <p className="mt-1 text-sm text-muted-foreground">
-              管理平台所有课程内容、价格与上架状态
+            <p className="mt-3 max-w-2xl text-[14px] leading-relaxed text-muted-foreground">
+              管理平台所有课程内容、学员、报名审核与上架状态。
             </p>
           </div>
           <Button
             onClick={openCreate}
-            className="bg-gradient-to-r from-primary to-accent text-primary-foreground"
+            className="self-start rounded-[2px] font-mono text-[12px] uppercase tracking-[0.06em] sm:self-auto"
           >
-            <Plus className="mr-1.5 h-4 w-4" />
+            <Plus className="mr-1.5 h-3.5 w-3.5" />
             新建课程
           </Button>
         </motion.div>
 
-        {/* Stats */}
+        {/* —— 统计行 —— */}
         <motion.div
-          initial={{ opacity: 0, y: 20 }}
+          initial={{ opacity: 0, y: 12 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.4, delay: 0.1 }}
-          className="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-3"
+          transition={{ duration: 0.4, delay: 0.06 }}
+          className="mt-8 grid grid-cols-1 gap-3 sm:grid-cols-3"
         >
           {stats.map((s) => (
-            <Card key={s.label} className="p-5">
-              <div className="flex items-center gap-3">
-                <div
-                  className={cn(
-                    "flex h-10 w-10 items-center justify-center rounded-lg",
-                    s.tint
-                  )}
-                >
-                  <s.icon className="h-5 w-5" />
-                </div>
-                <div>
-                  <div className="text-2xl font-bold tracking-tight">
-                    {loading ? (
-                      <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
-                    ) : (
-                      s.value
-                    )}
-                  </div>
-                  <div className="text-xs text-muted-foreground">
-                    {s.label}
-                  </div>
-                </div>
+            <div
+              key={s.label}
+              className="rounded-[2px] border border-border/70 bg-card/50 p-5"
+            >
+              <div className="flex items-center gap-2">
+                <s.icon className="h-3.5 w-3.5 text-muted-foreground" />
+                <span className="font-mono text-[10px] uppercase tracking-[0.12em] text-muted-foreground">
+                  {s.label}
+                </span>
               </div>
-            </Card>
+              <div className="font-display mt-3 text-[32px] font-bold leading-none tracking-tight">
+                {loading ? (
+                  <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+                ) : (
+                  s.value
+                )}
+              </div>
+            </div>
           ))}
         </motion.div>
 
-        {/* Tabs: 课程管理 / 数据看板 */}
+        {/* —— Tab 切换 —— */}
         <motion.div
-          initial={{ opacity: 0, y: 20 }}
+          initial={{ opacity: 0, y: 12 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.4, delay: 0.2 }}
-          className="mt-6"
+          transition={{ duration: 0.4, delay: 0.12 }}
+          className="mt-8"
         >
           <Tabs defaultValue="courses" className="w-full">
-            <TabsList className="grid w-full max-w-md grid-cols-3">
-              <TabsTrigger value="courses" className="gap-1.5">
-                <BookOpen className="h-3.5 w-3.5" />
+            <TabsList className="grid h-auto w-full max-w-2xl grid-cols-4 rounded-[2px] border border-border/70 bg-card/40 p-0.5">
+              <TabsTrigger
+                value="courses"
+                className="gap-1.5 rounded-[2px] py-1.5 font-mono text-[11px] uppercase tracking-[0.08em] data-[state=active]:bg-foreground/10"
+              >
+                <BookOpen className="h-3 w-3" />
                 课程管理
               </TabsTrigger>
-              <TabsTrigger value="dashboard" className="gap-1.5">
-                <BarChart3 className="h-3.5 w-3.5" />
-                数据看板
-              </TabsTrigger>
-              <TabsTrigger value="students" className="gap-1.5">
-                <Users className="h-3.5 w-3.5" />
+              <TabsTrigger
+                value="students"
+                className="gap-1.5 rounded-[2px] py-1.5 font-mono text-[11px] uppercase tracking-[0.08em] data-[state=active]:bg-foreground/10"
+              >
+                <Users className="h-3 w-3" />
                 学员管理
+              </TabsTrigger>
+              <TabsTrigger
+                value="enrollments"
+                className="gap-1.5 rounded-[2px] py-1.5 font-mono text-[11px] uppercase tracking-[0.08em] data-[state=active]:bg-foreground/10"
+              >
+                <ClipboardCheck className="h-3 w-3" />
+                报名审核
+              </TabsTrigger>
+              <TabsTrigger
+                value="ai-models"
+                className="gap-1.5 rounded-[2px] py-1.5 font-mono text-[11px] uppercase tracking-[0.08em] data-[state=active]:bg-foreground/10"
+              >
+                <Cpu className="h-3 w-3" />
+                AI 模型
               </TabsTrigger>
             </TabsList>
 
@@ -646,19 +642,19 @@ export function AdminView() {
           </Card>
             </TabsContent>
 
-            {/* 数据看板 Tab */}
-            <TabsContent value="dashboard" className="mt-4">
-              <DashboardTab
-                courses={courses}
-                totalStudents={totalStudents}
-                totalRevenue={totalRevenue}
-                loading={loading}
-              />
-            </TabsContent>
-
             {/* 学员管理 Tab */}
             <TabsContent value="students" className="mt-4">
               <StudentsTab courses={courses} />
+            </TabsContent>
+
+            {/* 报名审核 Tab */}
+            <TabsContent value="enrollments" className="mt-4">
+              <EnrollmentsTab courses={courses} />
+            </TabsContent>
+
+            {/* AI 模型配置 Tab */}
+            <TabsContent value="ai-models" className="mt-4">
+              <AiModelsTab />
             </TabsContent>
           </Tabs>
         </motion.div>
@@ -690,7 +686,7 @@ export function AdminView() {
                 onChange={(e) =>
                   setForm((f) => ({ ...f, title: e.target.value }))
                 }
-                placeholder="例如：抖音电影解说 · 从 0 到百万播放"
+                placeholder="例如：抖音电影解说 · 从入门到精通"
               />
             </div>
 
@@ -936,7 +932,7 @@ export function AdminView() {
                 onChange={(e) =>
                   setForm((f) => ({ ...f, highlights: e.target.value }))
                 }
-                placeholder="每行一条，例如：&#10;AI 文案工具永久免费&#10;6 年赛道操盘经验沉淀"
+                placeholder="每行一条，例如：&#10;AI 文案工具授权学员可用&#10;6 年赛道操盘经验沉淀"
                 rows={3}
               />
               <p className="text-[11px] text-muted-foreground">
@@ -1467,303 +1463,6 @@ function LessonForm({
   );
 }
 
-/* ----------------------- 数据看板组件 ----------------------- */
-
-function DashboardTab({
-  courses,
-  totalStudents,
-  totalRevenue,
-  loading,
-}: {
-  courses: AdminCourse[];
-  totalStudents: number;
-  totalRevenue: number;
-  loading: boolean;
-}) {
-  // 计算各项指标
-  const totalLessons = courses.reduce((s, c) => s + (c._count?.lessons || 0), 0);
-  const freeCount = courses.filter((c) => c.isFree).length;
-  const paidCount = courses.length - freeCount;
-  const featuredCount = courses.filter((c) => c.isFeatured).length;
-  const avgPrice = paidCount > 0
-    ? Math.round(courses.filter((c) => !c.isFree).reduce((s, c) => s + c.price, 0) / paidCount)
-    : 0;
-  const avgStudents = courses.length > 0 ? Math.round(totalStudents / courses.length) : 0;
-
-  // 按分类分布
-  const byCategory = React.useMemo(() => {
-    const map = new Map<string, { count: number; students: number; revenue: number }>();
-    for (const c of courses) {
-      const k = c.category || "未分类";
-      const cur = map.get(k) || { count: 0, students: 0, revenue: 0 };
-      cur.count += 1;
-      cur.students += c.studentsCount || 0;
-      cur.revenue += c.isFree ? 0 : (c.price || 0) * (c.studentsCount || 0);
-      map.set(k, cur);
-    }
-    return Array.from(map.entries()).sort((a, b) => b[1].students - a[1].students);
-  }, [courses]);
-
-  // 按难度分布
-  const byLevel = React.useMemo(() => {
-    const map = new Map<string, number>();
-    for (const c of courses) {
-      const k = c.level || "未设";
-      map.set(k, (map.get(k) || 0) + 1);
-    }
-    return Array.from(map.entries());
-  }, [courses]);
-
-  // 学员 Top 5 课程
-  const topCourses = React.useMemo(() => {
-    return [...courses].sort((a, b) => b.studentsCount - a.studentsCount).slice(0, 5);
-  }, [courses]);
-
-  // 收入 Top 5 课程
-  const topRevenue = React.useMemo(() => {
-    return [...courses]
-      .map((c) => ({ ...c, revenue: c.isFree ? 0 : (c.price || 0) * (c.studentsCount || 0) }))
-      .sort((a, b) => b.revenue - a.revenue)
-      .slice(0, 5);
-  }, [courses]);
-
-  if (loading) {
-    return (
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        {Array.from({ length: 8 }).map((_, i) => (
-          <div key={i} className="h-28 animate-pulse rounded-xl bg-muted/40" />
-        ))}
-      </div>
-    );
-  }
-
-  const metrics = [
-    {
-      icon: BookOpen,
-      label: "课程总数",
-      value: String(courses.length),
-      sub: `${freeCount} 免费 / ${paidCount} 付费`,
-      tint: "from-rose-500/15 to-rose-500/5 text-rose-500",
-    },
-    {
-      icon: Layers,
-      label: "课时总数",
-      value: String(totalLessons),
-      sub: `平均 ${courses.length > 0 ? Math.round(totalLessons / courses.length) : 0} 节/课`,
-      tint: "from-violet-500/15 to-violet-500/5 text-violet-500",
-    },
-    {
-      icon: Users,
-      label: "累计学员",
-      value: totalStudents.toLocaleString(),
-      sub: `平均 ${avgStudents}/课`,
-      tint: "from-amber-500/15 to-amber-500/5 text-amber-500",
-    },
-    {
-      icon: Wallet,
-      label: "收入估算",
-      value: `¥${totalRevenue.toLocaleString()}`,
-      sub: `均价 ¥${avgPrice}`,
-      tint: "from-emerald-500/15 to-emerald-500/5 text-emerald-500",
-    },
-  ];
-
-  const maxStudents = topCourses[0]?.studentsCount || 1;
-  const maxRevenue = topRevenue[0]?.revenue || 1;
-  const maxCatStudents = byCategory[0]?.[1].students || 1;
-
-  return (
-    <div className="space-y-5">
-      {/* 核心指标 4 卡 */}
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        {metrics.map((m, i) => (
-          <motion.div
-            key={m.label}
-            initial={{ opacity: 0, y: 12 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: i * 0.08 }}
-          >
-            <Card className={cn("relative overflow-hidden p-5")}>
-              <div className={cn("absolute -right-4 -top-4 h-20 w-20 rounded-full bg-gradient-to-br opacity-50 blur-2xl", m.tint)} />
-              <div className="relative flex items-center gap-3">
-                <div className={cn("flex h-10 w-10 items-center justify-center rounded-lg bg-gradient-to-br", m.tint)}>
-                  <m.icon className="h-5 w-5" />
-                </div>
-                <div className="min-w-0">
-                  <div className="text-2xl font-bold tracking-tight">{m.value}</div>
-                  <div className="text-xs text-muted-foreground">{m.label}</div>
-                </div>
-              </div>
-              <div className="relative mt-3 text-[11px] text-muted-foreground">
-                {m.sub}
-              </div>
-            </Card>
-          </motion.div>
-        ))}
-      </div>
-
-      <div className="grid gap-5 lg:grid-cols-2">
-        {/* 学员 Top 5 */}
-        <Card className="p-5">
-          <div className="mb-4 flex items-center justify-between">
-            <h3 className="flex items-center gap-2 text-sm font-semibold">
-              <TrendingUp className="h-4 w-4 text-primary" />
-              学员数 Top 5
-            </h3>
-            <span className="text-[11px] text-muted-foreground">按报名人数排序</span>
-          </div>
-          <div className="space-y-3">
-            {topCourses.map((c, i) => (
-              <div key={c.id} className="space-y-1.5">
-                <div className="flex items-center justify-between gap-2 text-xs">
-                  <span className="flex min-w-0 items-center gap-1.5">
-                    <span className={cn(
-                      "flex h-5 w-5 shrink-0 items-center justify-center rounded-md text-[10px] font-bold",
-                      i === 0 ? "bg-amber-500/15 text-amber-600 dark:text-amber-400" :
-                      i === 1 ? "bg-slate-400/15 text-slate-500" :
-                      i === 2 ? "bg-orange-700/15 text-orange-700 dark:text-orange-400" :
-                      "bg-muted text-muted-foreground"
-                    )}>
-                      {i + 1}
-                    </span>
-                    <span className="truncate font-medium">{c.title}</span>
-                  </span>
-                  <span className="shrink-0 font-semibold text-primary">
-                    {c.studentsCount.toLocaleString()}
-                  </span>
-                </div>
-                <div className="h-1.5 overflow-hidden rounded-full bg-muted">
-                  <motion.div
-                    initial={{ width: 0 }}
-                    animate={{ width: `${(c.studentsCount / maxStudents) * 100}%` }}
-                    transition={{ duration: 0.6, delay: i * 0.1 }}
-                    className="h-full rounded-full bg-gradient-to-r from-primary to-accent"
-                  />
-                </div>
-              </div>
-            ))}
-          </div>
-        </Card>
-
-        {/* 收入 Top 5 */}
-        <Card className="p-5">
-          <div className="mb-4 flex items-center justify-between">
-            <h3 className="flex items-center gap-2 text-sm font-semibold">
-              <Wallet className="h-4 w-4 text-emerald-500" />
-              收入贡献 Top 5
-            </h3>
-            <span className="text-[11px] text-muted-foreground">价格 × 学员数</span>
-          </div>
-          <div className="space-y-3">
-            {topRevenue.map((c, i) => (
-              <div key={c.id} className="space-y-1.5">
-                <div className="flex items-center justify-between gap-2 text-xs">
-                  <span className="flex min-w-0 items-center gap-1.5">
-                    <span className={cn(
-                      "flex h-5 w-5 shrink-0 items-center justify-center rounded-md text-[10px] font-bold",
-                      i === 0 ? "bg-amber-500/15 text-amber-600 dark:text-amber-400" :
-                      i === 1 ? "bg-slate-400/15 text-slate-500" :
-                      i === 2 ? "bg-orange-700/15 text-orange-700 dark:text-orange-400" :
-                      "bg-muted text-muted-foreground"
-                    )}>
-                      {i + 1}
-                    </span>
-                    <span className="truncate font-medium">{c.title}</span>
-                  </span>
-                  <span className="shrink-0 font-semibold text-emerald-600 dark:text-emerald-400">
-                    ¥{c.revenue.toLocaleString()}
-                  </span>
-                </div>
-                <div className="h-1.5 overflow-hidden rounded-full bg-muted">
-                  <motion.div
-                    initial={{ width: 0 }}
-                    animate={{ width: `${(c.revenue / maxRevenue) * 100}%` }}
-                    transition={{ duration: 0.6, delay: i * 0.1 }}
-                    className="h-full rounded-full bg-gradient-to-r from-emerald-500 to-teal-500"
-                  />
-                </div>
-              </div>
-            ))}
-          </div>
-        </Card>
-      </div>
-
-      <div className="grid gap-5 lg:grid-cols-2">
-        {/* 分类分布 */}
-        <Card className="p-5">
-          <div className="mb-4 flex items-center justify-between">
-            <h3 className="flex items-center gap-2 text-sm font-semibold">
-              <GraduationCap className="h-4 w-4 text-accent" />
-              分类分布
-            </h3>
-            <span className="text-[11px] text-muted-foreground">{byCategory.length} 个分类</span>
-          </div>
-          <div className="space-y-3">
-            {byCategory.map(([cat, data], i) => (
-              <div key={cat} className="space-y-1.5">
-                <div className="flex items-center justify-between gap-2 text-xs">
-                  <span className="font-medium">{cat}</span>
-                  <div className="flex items-center gap-3 text-muted-foreground">
-                    <span>{data.count} 课</span>
-                    <span className="font-semibold text-foreground">{data.students.toLocaleString()} 学员</span>
-                    <span className="text-emerald-600 dark:text-emerald-400">¥{data.revenue.toLocaleString()}</span>
-                  </div>
-                </div>
-                <div className="h-1.5 overflow-hidden rounded-full bg-muted">
-                  <motion.div
-                    initial={{ width: 0 }}
-                    animate={{ width: `${(data.students / maxCatStudents) * 100}%` }}
-                    transition={{ duration: 0.6, delay: i * 0.08 }}
-                    className="h-full rounded-full bg-gradient-to-r from-accent to-primary"
-                  />
-                </div>
-              </div>
-            ))}
-          </div>
-        </Card>
-
-        {/* 难度分布 + 精选统计 */}
-        <Card className="p-5">
-          <div className="mb-4 flex items-center justify-between">
-            <h3 className="flex items-center gap-2 text-sm font-semibold">
-              <Activity className="h-4 w-4 text-violet-500" />
-              难度 & 精选统计
-            </h3>
-          </div>
-          <div className="grid grid-cols-2 gap-3">
-            {byLevel.map(([level, count]) => (
-              <div key={level} className="rounded-lg border border-border/60 bg-muted/30 p-3">
-                <div className="text-[11px] text-muted-foreground">{level}</div>
-                <div className="mt-1 text-xl font-bold">{count}</div>
-                <div className="text-[10px] text-muted-foreground">门课程</div>
-              </div>
-            ))}
-          </div>
-          <div className="mt-4 grid grid-cols-2 gap-3">
-            <div className="rounded-lg border border-amber-500/20 bg-amber-500/5 p-3">
-              <div className="flex items-center gap-1.5 text-[11px] text-amber-600 dark:text-amber-400">
-                <Crown className="h-3 w-3" />
-                精选课程
-              </div>
-              <div className="mt-1 text-xl font-bold text-amber-600 dark:text-amber-400">{featuredCount}</div>
-              <div className="text-[10px] text-muted-foreground">门已精选</div>
-            </div>
-            <div className="rounded-lg border border-emerald-500/20 bg-emerald-500/5 p-3">
-              <div className="flex items-center gap-1.5 text-[11px] text-emerald-600 dark:text-emerald-400">
-                <Star className="h-3 w-3" />
-                免费课程
-              </div>
-              <div className="mt-1 text-xl font-bold text-emerald-600 dark:text-emerald-400">{freeCount}</div>
-              <div className="text-[10px] text-muted-foreground">门免费</div>
-            </div>
-          </div>
-        </Card>
-      </div>
-    </div>
-  );
-}
-
-/* ----------------------- 学员管理组件 ----------------------- */
 
 interface StudentItem {
   id: string;
@@ -1994,6 +1693,915 @@ function StudentsTab({ courses }: { courses: AdminCourse[] }) {
           </div>
         )}
       </Card>
+    </div>
+  );
+}
+
+/* ----------------------- 报名审核组件 ----------------------- */
+
+interface EnrollmentItem {
+  id: string;
+  userId: string;
+  courseId: string;
+  status: "pending" | "approved" | "rejected";
+  progress: number;
+  enrolledAt: string;
+  completedAt: string | null;
+  lastActiveAt: string;
+  user: {
+    id: string;
+    name: string;
+    email: string;
+    avatar: string | null;
+    createdAt: string;
+  };
+  course: {
+    id: string;
+    title: string;
+    price: number;
+    isFree: boolean;
+  };
+}
+
+function EnrollmentsTab({ courses }: { courses: AdminCourse[] }) {
+  const [enrollments, setEnrollments] = React.useState<EnrollmentItem[]>([]);
+  const [loading, setLoading] = React.useState(true);
+  const [statusFilter, setStatusFilter] = React.useState<string>("pending");
+  const [actingId, setActingId] = React.useState<string | null>(null);
+  // 手动添加报名
+  const [manualOpen, setManualOpen] = React.useState(false);
+  const [manualUserId, setManualUserId] = React.useState("");
+  const [manualCourseId, setManualCourseId] = React.useState("");
+  const [manualCreating, setManualCreating] = React.useState(false);
+  const [searchUsers, setSearchUsers] = React.useState<Array<{ id: string; name: string; email: string }>>([]);
+  const [searchingUsers, setSearchingUsers] = React.useState(false);
+
+  const fetchEnrollments = React.useCallback(async () => {
+    setLoading(true);
+    try {
+      const params = new URLSearchParams({ status: statusFilter === "all" ? "all" : statusFilter });
+      const res = await fetch(`/api/admin/pending-enrollments?${params.toString()}`);
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "加载失败");
+      setEnrollments(data.pending || []);
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "加载报名记录失败");
+    } finally {
+      setLoading(false);
+    }
+  }, [statusFilter]);
+
+  React.useEffect(() => {
+    fetchEnrollments();
+  }, [fetchEnrollments]);
+
+  const handleAction = async (enrollmentId: string, action: "approve" | "reject") => {
+    setActingId(enrollmentId);
+    try {
+      const res = await fetch("/api/admin/pending-enrollments", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ enrollmentId, action }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "操作失败");
+      toast.success(action === "approve" ? "已通过" : "已拒绝");
+      setEnrollments((prev) => prev.filter((e) => e.id !== enrollmentId));
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "操作失败");
+    } finally {
+      setActingId(null);
+    }
+  };
+
+  // 搜索学员（按邮箱/姓名）
+  const handleSearchUser = async (q: string) => {
+    setManualUserId(q);
+    if (q.trim().length < 2) {
+      setSearchUsers([]);
+      return;
+    }
+    setSearchingUsers(true);
+    try {
+      const res = await fetch(`/api/admin/students?search=${encodeURIComponent(q.trim())}`);
+      const data = await res.json();
+      setSearchUsers((data.students || []).slice(0, 10));
+    } catch {
+      // ignore
+    } finally {
+      setSearchingUsers(false);
+    }
+  };
+
+  // 手动创建报名
+  const handleManualCreate = async () => {
+    if (!manualUserId || !manualCourseId) {
+      toast.error("请选择学员和课程");
+      return;
+    }
+    setManualCreating(true);
+    try {
+      const res = await fetch("/api/admin/pending-enrollments", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ userId: manualUserId, courseId: manualCourseId }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "创建失败");
+      toast.success("报名已创建并开通");
+      setManualOpen(false);
+      setManualUserId("");
+      setManualCourseId("");
+      setSearchUsers([]);
+      fetchEnrollments();
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "创建失败");
+    } finally {
+      setManualCreating(false);
+    }
+  };
+
+  const filtered = enrollments.filter((e) =>
+    statusFilter === "all" ? true : e.status === statusFilter
+  );
+
+  const pendingCount = enrollments.filter((e) => e.status === "pending").length;
+  const approvedCount = enrollments.filter((e) => e.status === "approved").length;
+  const rejectedCount = enrollments.filter((e) => e.status === "rejected").length;
+
+  const formatDate = (iso: string) => {
+    const d = new Date(iso);
+    return d.toLocaleDateString("zh-CN", {
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+    });
+  };
+
+  const formatRelative = (iso: string) => {
+    const diff = (Date.now() - new Date(iso).getTime()) / 1000;
+    if (diff < 3600) return `${Math.floor(diff / 60)}分钟前`;
+    if (diff < 86400) return `${Math.floor(diff / 3600)}小时前`;
+    if (diff < 604800) return `${Math.floor(diff / 86400)}天前`;
+    return formatDate(iso);
+  };
+
+  return (
+    <div className="space-y-5">
+      {/* 状态统计卡 */}
+      <div className="grid gap-4 sm:grid-cols-4">
+        {[
+          {
+            icon: Users,
+            label: "待审核",
+            value: pendingCount,
+            tint: "from-amber-500/15 to-amber-500/5 text-amber-500",
+          },
+          {
+            icon: BookCheck,
+            label: "已通过",
+            value: approvedCount,
+            tint: "from-emerald-500/15 to-emerald-500/5 text-emerald-500",
+          },
+          {
+            icon: AlertTriangle,
+            label: "已拒绝",
+            value: rejectedCount,
+            tint: "from-rose-500/15 to-rose-500/5 text-rose-500",
+          },
+          {
+            icon: BarChart3,
+            label: "总计",
+            value: enrollments.length,
+            tint: "from-violet-500/15 to-violet-500/5 text-violet-500",
+          },
+        ].map((m, i) => (
+          <motion.div
+            key={m.label}
+            initial={{ opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: i * 0.06 }}
+          >
+            <Card className="relative overflow-hidden p-4">
+              <div
+                className={cn(
+                  "absolute -right-3 -top-3 h-16 w-16 rounded-full bg-gradient-to-br opacity-50 blur-2xl",
+                  m.tint
+                )}
+              />
+              <div className="relative flex items-center gap-3">
+                <div
+                  className={cn(
+                    "flex h-9 w-9 items-center justify-center rounded-lg bg-gradient-to-br",
+                    m.tint
+                  )}
+                >
+                  <m.icon className="h-4 w-4" />
+                </div>
+                <div>
+                  <div className="text-xl font-bold">{m.value}</div>
+                  <div className="text-[11px] text-muted-foreground">{m.label}</div>
+                </div>
+              </div>
+            </Card>
+          </motion.div>
+        ))}
+      </div>
+
+      {/* 筛选标签 */}
+      <Card className="p-4">
+        <div className="flex flex-wrap items-center gap-2">
+          {[
+            { key: "pending", label: `待审核 (${pendingCount})` },
+            { key: "approved", label: `已通过 (${approvedCount})` },
+            { key: "rejected", label: `已拒绝 (${rejectedCount})` },
+            { key: "all", label: `全部 (${enrollments.length})` },
+          ].map((tab) => (
+            <Button
+              key={tab.key}
+              variant={statusFilter === tab.key ? "default" : "outline"}
+              size="sm"
+              onClick={() => setStatusFilter(tab.key)}
+              className={cn(
+                "h-8 text-xs",
+                statusFilter === tab.key &&
+                  tab.key === "pending" &&
+                  "bg-amber-500 text-white hover:bg-amber-600",
+                statusFilter === tab.key &&
+                  tab.key === "approved" &&
+                  "bg-emerald-500 text-white hover:bg-emerald-600",
+                statusFilter === tab.key &&
+                  tab.key === "rejected" &&
+                  "bg-rose-500 text-white hover:bg-rose-600",
+                statusFilter === tab.key &&
+                  tab.key === "all" &&
+                  "bg-violet-500 text-white hover:bg-violet-600"
+              )}
+            >
+              {tab.label}
+            </Button>
+          ))}
+        </div>
+      </Card>
+
+      {/* 手动添加报名 */}
+      <div className="flex justify-end">
+        <Button
+          variant="outline"
+          size="sm"
+          className="h-8 gap-1.5"
+          onClick={() => setManualOpen(true)}
+        >
+          <Plus className="h-3.5 w-3.5" />
+          手动添加报名
+        </Button>
+      </div>
+
+      {/* 报名列表 */}
+      <Card className="p-0">
+        <div className="border-b px-5 py-4">
+          <h3 className="text-base font-semibold">报名记录</h3>
+          <p className="text-xs text-muted-foreground">
+            共 {filtered.length} 条记录
+          </p>
+        </div>
+        {loading ? (
+          <div className="space-y-2 p-5">
+            {Array.from({ length: 5 }).map((_, i) => (
+              <div key={i} className="h-16 animate-pulse rounded-md bg-muted/40" />
+            ))}
+          </div>
+        ) : filtered.length === 0 ? (
+          <div className="flex flex-col items-center justify-center py-16 text-center">
+            <ListChecks className="mb-3 h-10 w-10 text-muted-foreground/40" />
+            <p className="text-sm text-muted-foreground">
+              {statusFilter === "pending"
+                ? "暂无待审核的报名申请"
+                : statusFilter === "approved"
+                  ? "暂无已通过的报名"
+                  : statusFilter === "rejected"
+                    ? "暂无已拒绝的报名"
+                    : "暂无报名记录"}
+            </p>
+          </div>
+        ) : (
+          <div className="scrollbar-thin max-h-[700px] overflow-y-auto">
+            {filtered.map((e, i) => (
+              <motion.div
+                key={e.id}
+                initial={{ opacity: 0, y: 4 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: i * 0.03 }}
+                className="flex flex-wrap items-center gap-4 border-b border-border/40 p-4 transition-colors hover:bg-muted/30 sm:flex-nowrap"
+              >
+                {/* 用户头像 + 信息 */}
+                <div className="flex min-w-0 flex-1 items-center gap-3">
+                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-primary to-accent text-sm font-bold text-primary-foreground">
+                    {e.user.name?.slice(0, 1) || "?"}
+                  </div>
+                  <div className="min-w-0">
+                    <div className="flex items-center gap-2">
+                      <p className="truncate text-sm font-medium">{e.user.name}</p>
+                      <Badge
+                        variant="outline"
+                        className={cn(
+                          "shrink-0 text-[10px]",
+                          e.status === "pending" &&
+                            "border-amber-500/30 text-amber-600 dark:text-amber-400",
+                          e.status === "approved" &&
+                            "border-emerald-500/30 text-emerald-600 dark:text-emerald-400",
+                          e.status === "rejected" &&
+                            "border-rose-500/30 text-rose-600 dark:text-rose-400"
+                        )}
+                      >
+                        {e.status === "pending" && "待审核"}
+                        {e.status === "approved" && "已通过"}
+                        {e.status === "rejected" && "已拒绝"}
+                      </Badge>
+                    </div>
+                    <p className="truncate text-xs text-muted-foreground">{e.user.email}</p>
+                  </div>
+                </div>
+
+                {/* 课程信息 */}
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-sm font-medium">{e.course.title}</p>
+                  <p className="text-xs text-muted-foreground">
+                    全部课程统一授权申请 · 
+                    报名于 {formatDate(e.enrolledAt)}
+                  </p>
+                </div>
+
+                {/* 操作按钮 */}
+                {e.status === "pending" && (
+                  <div className="flex shrink-0 gap-2">
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="h-8 border-emerald-500/30 text-emerald-600 hover:bg-emerald-500/10 hover:text-emerald-600 dark:text-emerald-400"
+                      onClick={() => handleAction(e.id, "approve")}
+                      disabled={actingId === e.id}
+                    >
+                      {actingId === e.id ? (
+                        <Loader2 className="mr-1 h-3 w-3 animate-spin" />
+                      ) : (
+                        <BookCheck className="mr-1 h-3 w-3" />
+                      )}
+                      通过
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="h-8 border-rose-500/30 text-rose-600 hover:bg-rose-500/10 hover:text-rose-600 dark:text-rose-400"
+                      onClick={() => handleAction(e.id, "reject")}
+                      disabled={actingId === e.id}
+                    >
+                      {actingId === e.id ? (
+                        <Loader2 className="mr-1 h-3 w-3 animate-spin" />
+                      ) : (
+                        <Trash2 className="mr-1 h-3 w-3" />
+                      )}
+                      拒绝
+                    </Button>
+                  </div>
+                )}
+
+                {/* 已处理的时间信息 */}
+                {e.status !== "pending" && (
+                  <div className="shrink-0 text-right text-[11px] text-muted-foreground">
+                    {formatRelative(e.lastActiveAt)}
+                  </div>
+                )}
+              </motion.div>
+            ))}
+          </div>
+        )}
+      </Card>
+
+      {/* 手动添加报名弹窗 */}
+      <Dialog open={manualOpen} onOpenChange={setManualOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>手动添加报名</DialogTitle>
+            <DialogDescription>
+              为学员统一开通全部课程（线下缴费后使用）
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            {/* 学员选择 */}
+            <div className="space-y-2">
+              <Label>选择学员</Label>
+              <Input
+                value={manualUserId}
+                onChange={(e) => handleSearchUser(e.target.value)}
+                placeholder="搜索学员邮箱或昵称…"
+              />
+              {searchingUsers && (
+                <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                  <Loader2 className="h-3 w-3 animate-spin" />
+                  搜索中…
+                </div>
+              )}
+              {searchUsers.length > 0 && (
+                <div className="max-h-[200px] overflow-y-auto rounded-md border border-border/60">
+                  {searchUsers.map((u) => (
+                    <button
+                      key={u.id}
+                      type="button"
+                      onClick={() => {
+                        setManualUserId(u.id);
+                        setSearchUsers([]);
+                      }}
+                      className="flex w-full items-center gap-2 px-3 py-2 text-left text-xs transition-colors hover:bg-muted"
+                    >
+                      <div className="flex h-6 w-6 items-center justify-center rounded-full bg-primary/10 text-[9px] font-bold text-primary">
+                        {u.name.slice(0, 1)}
+                      </div>
+                      <span className="font-medium">{u.name}</span>
+                      <span className="text-muted-foreground">{u.email}</span>
+                    </button>
+                  ))}
+                </div>
+              )}
+              {manualUserId && searchUsers.length === 0 && !searchingUsers && (
+                <p className="text-xs text-muted-foreground">
+                  {manualUserId.includes("@") || manualUserId.length > 5
+                    ? "已选中学员（ID: " + manualUserId.slice(0, 8) + "…）"
+                    : "请输入至少2个字符搜索"}
+                </p>
+              )}
+            </div>
+
+            {/* 课程选择 */}
+            <div className="space-y-2">
+              <Label>选择课程</Label>
+              <Select value={manualCourseId} onValueChange={setManualCourseId}>
+                <SelectTrigger>
+                  <SelectValue placeholder="选择课程" />
+                </SelectTrigger>
+                <SelectContent>
+                  {courses.map((c) => (
+                    <SelectItem key={c.id} value={c.id}>
+                      {c.title}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="flex gap-2 justify-end pt-2">
+              <Button variant="outline" onClick={() => setManualOpen(false)}>
+                取消
+              </Button>
+              <Button onClick={handleManualCreate} disabled={manualCreating}>
+                {manualCreating ? (
+                  <>
+                    <Loader2 className="mr-1.5 h-4 w-4 animate-spin" />
+                    创建中…
+                  </>
+                ) : (
+                  <>
+                    <Plus className="mr-1.5 h-4 w-4" />
+                    开通全部课程
+                  </>
+                )}
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+    </div>
+  );
+}
+
+/* ----------------------- AI 模型配置 Tab ----------------------- */
+
+interface AiModelItem {
+  id: string;
+  name: string;
+  baseUrl: string;
+  model: string;
+  apiKeyMasked: string;
+  isDefault: boolean;
+  isActive: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+interface AiModelForm {
+  name: string;
+  baseUrl: string;
+  model: string;
+  apiKey: string;
+  isDefault: boolean;
+}
+
+function AiModelsTab() {
+  const [models, setModels] = React.useState<AiModelItem[]>([]);
+  const [loading, setLoading] = React.useState(true);
+  const [dialogOpen, setDialogOpen] = React.useState(false);
+  const [editingId, setEditingId] = React.useState<string | null>(null);
+  const [saving, setSaving] = React.useState(false);
+  const [showKey, setShowKey] = React.useState(false);
+  const [deleteTarget, setDeleteTarget] = React.useState<AiModelItem | null>(null);
+  const [deleting, setDeleting] = React.useState(false);
+  const [form, setForm] = React.useState<AiModelForm>({
+    name: "",
+    baseUrl: "",
+    model: "",
+    apiKey: "",
+    isDefault: false,
+  });
+
+  const fetchModels = React.useCallback(async () => {
+    setLoading(true);
+    try {
+      const res = await fetch("/api/admin/ai-models");
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "加载失败");
+      setModels(data.models || []);
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "加载模型失败");
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  React.useEffect(() => {
+    fetchModels();
+  }, [fetchModels]);
+
+  const openCreate = () => {
+    setEditingId(null);
+    setForm({ name: "", baseUrl: "", model: "", apiKey: "", isDefault: models.length === 0 });
+    setShowKey(false);
+    setDialogOpen(true);
+  };
+
+  const openEdit = (m: AiModelItem) => {
+    setEditingId(m.id);
+    setForm({
+      name: m.name,
+      baseUrl: m.baseUrl,
+      model: m.model,
+      apiKey: "",
+      isDefault: m.isDefault,
+    });
+    setShowKey(false);
+    setDialogOpen(true);
+  };
+
+  const handleSave = async () => {
+    if (!form.name.trim() || !form.baseUrl.trim() || !form.model.trim()) {
+      toast.error("显示名、Base URL、模型名均为必填");
+      return;
+    }
+    if (!editingId && !form.apiKey.trim()) {
+      toast.error("新增模型时 API Key 必填");
+      return;
+    }
+
+    setSaving(true);
+    try {
+      const body: Record<string, unknown> = {
+        name: form.name.trim(),
+        baseUrl: form.baseUrl.trim(),
+        model: form.model.trim(),
+        isDefault: form.isDefault,
+      };
+      // 编辑时 apiKey 留空则不传（保留原值）
+      if (form.apiKey.trim()) body.apiKey = form.apiKey.trim();
+
+      const url = editingId
+        ? `/api/admin/ai-models/${editingId}`
+        : "/api/admin/ai-models";
+      const res = await fetch(url, {
+        method: editingId ? "PATCH" : "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "保存失败");
+      toast.success(editingId ? "模型已更新" : "模型已添加");
+      setDialogOpen(false);
+      fetchModels();
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "保存模型失败");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleSetDefault = async (m: AiModelItem) => {
+    try {
+      const res = await fetch(`/api/admin/ai-models/${m.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ isDefault: true }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "设置失败");
+      toast.success(`已将「${m.name}」设为默认模型`);
+      fetchModels();
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "设置默认失败");
+    }
+  };
+
+  const handleToggleActive = async (m: AiModelItem) => {
+    try {
+      const res = await fetch(`/api/admin/ai-models/${m.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ isActive: !m.isActive }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "切换失败");
+      toast.success(m.isActive ? "已停用" : "已启用");
+      fetchModels();
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "切换状态失败");
+    }
+  };
+
+  const handleDelete = async () => {
+    if (!deleteTarget) return;
+    setDeleting(true);
+    try {
+      const res = await fetch(`/api/admin/ai-models/${deleteTarget.id}`, {
+        method: "DELETE",
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "删除失败");
+      toast.success("模型已删除");
+      setDeleteTarget(null);
+      fetchModels();
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "删除模型失败");
+    } finally {
+      setDeleting(false);
+    }
+  };
+
+  const formatDate = (iso: string) => {
+    const d = new Date(iso);
+    return d.toLocaleDateString("zh-CN", { year: "numeric", month: "2-digit", day: "2-digit" });
+  };
+
+  return (
+    <div className="space-y-5">
+      <Card className="p-0">
+        <CardHeader className="border-b px-5 py-4">
+          <div className="flex items-center justify-between gap-3">
+            <div>
+              <CardTitle className="text-base">AI 模型配置</CardTitle>
+              <CardDescription className="text-xs">
+                添加 OpenAI 兼容端点，设其一为默认全局使用（文案 / 助教）。TTS 与联网搜索仍走智谱 SDK
+              </CardDescription>
+            </div>
+            <Button size="sm" onClick={openCreate}>
+              <Plus className="mr-1.5 h-4 w-4" />
+              添加模型
+            </Button>
+          </div>
+        </CardHeader>
+        <CardContent className="p-0">
+          {loading ? (
+            <div className="flex items-center justify-center py-16 text-muted-foreground">
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              加载中…
+            </div>
+          ) : models.length === 0 ? (
+            <div className="flex flex-col items-center justify-center gap-3 py-16 text-muted-foreground">
+              <Cpu className="h-8 w-8 opacity-40" />
+              <p className="text-sm">尚未配置任何模型，点击「添加模型」开始</p>
+            </div>
+          ) : (
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead className="w-[28%]">显示名 / 模型名</TableHead>
+                  <TableHead className="w-[30%]">Base URL</TableHead>
+                  <TableHead>API Key</TableHead>
+                  <TableHead className="text-center">状态</TableHead>
+                  <TableHead className="text-right">操作</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {models.map((m) => (
+                  <TableRow key={m.id}>
+                    <TableCell>
+                      <div className="flex items-center gap-2">
+                        <div>
+                          <div className="flex items-center gap-1.5 font-medium">
+                            {m.name}
+                            {m.isDefault && (
+                              <Badge variant="default" className="gap-1 bg-amber-500/90 px-1.5 text-[10px] text-white hover:bg-amber-500">
+                                <Crown className="h-2.5 w-2.5" />
+                                默认
+                              </Badge>
+                            )}
+                          </div>
+                          <div className="font-mono text-[11px] text-muted-foreground">{m.model}</div>
+                        </div>
+                      </div>
+                    </TableCell>
+                    <TableCell className="font-mono text-[11px] text-muted-foreground break-all">
+                      {m.baseUrl}
+                    </TableCell>
+                    <TableCell className="font-mono text-[11px] text-muted-foreground">
+                      {m.apiKeyMasked || "—"}
+                    </TableCell>
+                    <TableCell className="text-center">
+                      <button
+                        type="button"
+                        onClick={() => handleToggleActive(m)}
+                        className="inline-flex items-center gap-1.5 text-xs hover:opacity-80"
+                        title={m.isActive ? "点击停用" : "点击启用"}
+                      >
+                        <span className={cn("h-2 w-2 rounded-full", m.isActive ? "bg-emerald-500" : "bg-muted-foreground/40")} />
+                        {m.isActive ? "启用" : "停用"}
+                      </button>
+                    </TableCell>
+                    <TableCell className="text-right">
+                      <div className="inline-flex items-center gap-1">
+                        {!m.isDefault && (
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="h-7 px-2 text-xs"
+                            onClick={() => handleSetDefault(m)}
+                          >
+                            <Crown className="mr-1 h-3 w-3" />
+                            设默认
+                          </Button>
+                        )}
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-7 px-2 text-xs"
+                          onClick={() => openEdit(m)}
+                        >
+                          <Pencil className="h-3 w-3" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-7 px-2 text-xs text-rose-500 hover:text-rose-600"
+                          onClick={() => setDeleteTarget(m)}
+                        >
+                          <Trash2 className="h-3 w-3" />
+                        </Button>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* 创建 / 编辑 Dialog */}
+      <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle>{editingId ? "编辑模型" : "添加模型"}</DialogTitle>
+            <DialogDescription>
+              {editingId ? "修改模型信息，API Key 留空则保留原值" : "填写 OpenAI 兼容端点信息"}
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="grid gap-4 py-2">
+            {/* 显示名 */}
+            <div className="grid gap-2">
+              <Label>显示名</Label>
+              <Input
+                value={form.name}
+                onChange={(e) => setForm({ ...form, name: e.target.value })}
+                placeholder="如：智谱 GLM-4-Flash"
+              />
+            </div>
+
+            {/* Base URL */}
+            <div className="grid gap-2">
+              <Label>Base URL</Label>
+              <Input
+                value={form.baseUrl}
+                onChange={(e) => setForm({ ...form, baseUrl: e.target.value })}
+                placeholder="https://open.bigmodel.cn/api/paas/v4"
+                className="font-mono text-xs"
+              />
+              <p className="text-[11px] text-muted-foreground">
+                OpenAI 兼容端点，无需带 /chat/completions 后缀
+              </p>
+            </div>
+
+            {/* 模型名 */}
+            <div className="grid gap-2">
+              <Label>模型名</Label>
+              <Input
+                value={form.model}
+                onChange={(e) => setForm({ ...form, model: e.target.value })}
+                placeholder="glm-4-flash"
+                className="font-mono text-xs"
+              />
+            </div>
+
+            {/* API Key（隐藏输入） */}
+            <div className="grid gap-2">
+              <Label>API Key</Label>
+              <div className="relative">
+                <KeyRound className="absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
+                <Input
+                  type={showKey ? "text" : "password"}
+                  value={form.apiKey}
+                  onChange={(e) => setForm({ ...form, apiKey: e.target.value })}
+                  placeholder={editingId ? "留空则不修改" : "输入 API Key"}
+                  className="pl-8 pr-9 font-mono text-xs"
+                  autoComplete="off"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowKey(!showKey)}
+                  className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                  title={showKey ? "隐藏" : "显示"}
+                >
+                  {showKey ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
+                </button>
+              </div>
+              <p className="text-[11px] text-muted-foreground">
+                默认隐藏输入，仅管理员可见
+              </p>
+            </div>
+
+            {/* 设为默认 */}
+            <div className="flex items-center justify-between rounded-md border px-3 py-2.5">
+              <div>
+                <Label className="text-sm">设为默认模型</Label>
+                <p className="text-[11px] text-muted-foreground">
+                  启用后，所有文案与助教调用将使用该模型
+                </p>
+              </div>
+              <Switch
+                checked={form.isDefault}
+                onCheckedChange={(v) => setForm({ ...form, isDefault: v })}
+              />
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setDialogOpen(false)}>
+              取消
+            </Button>
+            <Button onClick={handleSave} disabled={saving}>
+              {saving ? (
+                <>
+                  <Loader2 className="mr-1.5 h-4 w-4 animate-spin" />
+                  保存中…
+                </>
+              ) : editingId ? (
+                "保存修改"
+              ) : (
+                "添加"
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* 删除确认 */}
+      <AlertDialog open={!!deleteTarget} onOpenChange={(o) => !o && setDeleteTarget(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>确认删除模型</AlertDialogTitle>
+            <AlertDialogDescription>
+              将删除「{deleteTarget?.name}」，该操作不可撤销。{deleteTarget?.isDefault && " 删除默认模型后，将自动把最早一个模型设为默认。"}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={deleting}>取消</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDelete}
+              disabled={deleting}
+              className="bg-rose-500 text-white hover:bg-rose-600"
+            >
+              {deleting ? (
+                <>
+                  <Loader2 className="mr-1.5 h-4 w-4 animate-spin" />
+                  删除中…
+                </>
+              ) : (
+                "确认删除"
+              )}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <p className="px-1 text-[11px] text-muted-foreground">
+        共 {models.length} 个模型 · 最后更新 {models[0] ? formatDate(models[0].updatedAt) : "—"}
+      </p>
     </div>
   );
 }
