@@ -1,35 +1,129 @@
 import "server-only";
-import ZAI from "z-ai-web-dev-sdk";
 import { db } from "@/lib/db";
+import { searchMoviePlotWithAgent, type AgentPlotResult } from "@/lib/agent";
+import { humanizeGeneratedCopy, type HumanizeCopyKind } from "@/lib/ai-humanizer";
+import { buildOpeningRetentionChecklist, buildOpeningRetentionRules } from "@/lib/ai-opening-rules";
 
-let zaiInstance: Awaited<ReturnType<typeof ZAI.create>> | null = null;
-
-export async function getZAI() {
-  if (!zaiInstance) {
-    zaiInstance = await ZAI.create();
-  }
-  return zaiInstance;
-}
-
-/** 自定义模型配置（从 AiModel 表读取，与 z-ai SDK 无关） */
+/** 自定义模型配置（从 AiModel 表读取） */
 export interface AiModelConfig {
   baseUrl: string;
   apiKey: string;
   model: string;
 }
 
-// 模块级缓存：避免每次文案生成都查库，60s 失效
+/** AI 调用上下文：用于区分用户模型与管理员全局模型 */
+export interface AiUserContext {
+  userId?: string;
+  isAdmin?: boolean;
+}
+
+// 全局默认模型缓存（管理员配置），60s 失效
 let activeModelCache: { cfg: AiModelConfig | null; expiresAt: number } = {
   cfg: null,
   expiresAt: 0,
 };
 
+// 用户自有模型缓存：userId → {cfg, expiresAt}，30s 失效
+const userModelCache = new Map<
+  string,
+  { cfg: AiModelConfig | null; expiresAt: number }
+>();
+
+// 全局模型公开开关缓存，10s 失效
+let globalPublicCache: { value: boolean; expiresAt: number } = {
+  value: true,
+  expiresAt: 0,
+};
+
 /**
- * 读取当前默认且启用的自定义模型配置。无配置返回 null。
- * 带 60s 模块级缓存，避免高频文案生成时频繁查库。
+ * 读取全局模型是否对普通用户公开。
+ * 默认公开（true）；管理员关闭后仅管理员可用全局模型。
  */
-export async function getActiveAiModel(): Promise<AiModelConfig | null> {
+export async function getGlobalModelPublic(): Promise<boolean> {
   const now = Date.now();
+  if (now < globalPublicCache.expiresAt) return globalPublicCache.value;
+  try {
+    const row = await db.systemSetting.findUnique({
+      where: { key: "ai_global_model_public" },
+    });
+    const value = row?.value !== "false"; // 默认公开
+    globalPublicCache = { value, expiresAt: now + 10_000 };
+    return value;
+  } catch {
+    globalPublicCache = { value: true, expiresAt: now + 10_000 };
+    return true;
+  }
+}
+
+/** 清除全局模型公开开关缓存 */
+export function clearGlobalModelPublicCache() {
+  globalPublicCache = { value: true, expiresAt: 0 };
+}
+
+/** 清除用户模型缓存（用户增删改模型后调用） */
+export function clearUserModelCache(userId?: string) {
+  if (userId) userModelCache.delete(userId);
+  else userModelCache.clear();
+}
+
+/** 清除全局默认模型缓存 */
+export function clearGlobalModelCache() {
+  activeModelCache = { cfg: null, expiresAt: 0 };
+}
+
+/**
+ * 读取当前可用的 AI 模型配置。
+ *
+ * 优先级：
+ * 1. 用户自有模型（UserAiModel 表，isActive=true）
+ * 2. 管理员全局默认模型（AiModel 表，isDefault=true + isActive=true）
+ *    - 管理员始终可用全局模型
+ *    - 普通用户仅在全局模型公开时可用
+ *
+ * 无可用配置返回 null。
+ */
+export async function getActiveAiModel(
+  ctx?: AiUserContext
+): Promise<AiModelConfig | null> {
+  const userId = ctx?.userId;
+  const isAdmin = ctx?.isAdmin ?? false;
+  const now = Date.now();
+
+  // 1. 优先使用用户自有模型
+  if (userId) {
+    const cached = userModelCache.get(userId);
+    if (cached && now < cached.expiresAt && cached.cfg) {
+      return cached.cfg;
+    }
+    try {
+      const userRow = await db.userAiModel.findFirst({
+        where: { userId, isActive: true },
+        orderBy: { updatedAt: "desc" },
+      });
+      if (userRow) {
+        const cfg = {
+          baseUrl: userRow.baseUrl,
+          apiKey: userRow.apiKey,
+          model: userRow.model,
+        };
+        userModelCache.set(userId, { cfg, expiresAt: now + 30_000 });
+        return cfg;
+      }
+      // 缓存「无用户模型」结果，15s 内不再重复查库
+      userModelCache.set(userId, { cfg: null, expiresAt: now + 15_000 });
+    } catch {
+      // 查库失败，继续回退到全局模型
+    }
+  }
+
+  // 2. 无用户模型 → 回退到管理员全局默认模型
+  // 普通用户需检查全局模型是否公开
+  if (!isAdmin) {
+    const isPublic = await getGlobalModelPublic();
+    if (!isPublic) return null;
+  }
+
+  // 3. 使用全局默认模型（带 60s 缓存）
   if (now < activeModelCache.expiresAt) {
     return activeModelCache.cfg;
   }
@@ -44,7 +138,6 @@ export async function getActiveAiModel(): Promise<AiModelConfig | null> {
     activeModelCache = { cfg, expiresAt: now + 60_000 };
     return cfg;
   } catch {
-    // 查库失败（如表尚未迁移）时回退到 SDK，不阻断现有功能
     activeModelCache = { cfg: null, expiresAt: now + 60_000 };
     return null;
   }
@@ -57,33 +150,60 @@ export async function getActiveAiModel(): Promise<AiModelConfig | null> {
  */
 export async function chatCompletionRaw(
   messages: { role: "system" | "user" | "assistant"; content: string }[],
-  cfg: AiModelConfig
+  cfg: AiModelConfig,
+  timeoutMs = 45_000
 ): Promise<string> {
-  const url = `${cfg.baseUrl.replace(/\/+$/, "")}/chat/completions`;
-  const resp = await fetch(url, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${cfg.apiKey}`,
-    },
-    body: JSON.stringify({
-      model: cfg.model,
-      messages,
-    }),
-  });
+  const base = cfg.baseUrl.replace(/\/+$/, "").replace(/\/chat\/completions\/?$/i, "");
+  const url = `${base}/chat/completions`;
+  let lastDetail = "";
+  const callStart = Date.now();
 
-  if (!resp.ok) {
-    const detail = await resp.text().catch(() => "");
-    throw new Error(
-      `自定义模型请求失败 (${resp.status}): ${detail.slice(0, 200)}`
-    );
+  for (let attempt = 0; attempt < 2; attempt += 1) {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), timeoutMs);
+    let resp: Response;
+    try {
+      resp = await fetch(url, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${cfg.apiKey}`,
+        },
+        body: JSON.stringify({
+          model: cfg.model,
+          messages,
+        }),
+        signal: controller.signal,
+      });
+    } catch (error) {
+      clearTimeout(timer);
+      if (error instanceof Error && error.name === "AbortError") {
+        throw new Error("AI 模型响应超时，请稍后重试或切换更快的模型");
+      }
+      throw error;
+    } finally {
+      clearTimeout(timer);
+    }
+
+    if (resp.ok) {
+      const data = await resp.json();
+      return data?.choices?.[0]?.message?.content ?? "";
+    }
+
+    lastDetail = await resp.text().catch(() => "");
+    if (resp.status < 500 || attempt === 1) {
+      throw new Error(
+        `自定义模型请求失败 (${resp.status}): ${lastDetail.slice(0, 200)}`
+      );
+    }
+
+    await new Promise((resolve) => setTimeout(resolve, 800));
   }
 
-  const data = await resp.json();
-  return data?.choices?.[0]?.message?.content ?? "";
+  throw new Error(`自定义模型请求失败: ${lastDetail.slice(0, 200)}`);
 }
 
-export type LearningStage = "小白" | "爆款" | "精选";
+export type LearningStage = "爆款" | "精选";
 export type WorkflowStep = "opening" | "story" | "ending";
 export type SourceMode = "none" | "web" | "doc";
 
@@ -147,22 +267,6 @@ type StageMethodConfig = {
 };
 
 const STAGE_METHODS: Record<LearningStage, StageMethodConfig> = {
-  小白: {
-    focus:
-      "围绕「目标-阻力-行动-结果」搭建骨架，先让学员学会不写流水账，再学会借助 AI 起步。",
-    learnerGoal:
-      "输出必须让新手一看就懂、能直接模仿，术语少、句式清楚。",
-    notesGuide:
-      "优先写明故事主线、人物目标、当前卡住点、你最担心哪里讲不顺。",
-    openingRule:
-      "开头用固定句式：『他想 [核心目标]，但问题是 [核心阻力/现状] 』。前半句直接回答核心目标，将观众瞬间带入主航道；后半句制造悬念和冲突，暗示实现目标的难度。",
-    storyRule:
-      "剧情段按叙事单元公式推进：目标/行动 → 结果 → (解释) → 情绪/新行动。每个单元以目标开始、以结果结束，中间填充阻力。用「观众立场判断法」决定是否需要插入解释——换位思考、把事说清楚为首要任务，禁止用「卖关子」等新手期不合适的技巧。",
-    endingRule:
-      "结尾用最通俗的一句把结果和感受收住，顺手点出这类文案为什么这样写。",
-    breakdownRule:
-      "方法拆解要解释每一段为什么这样安排，用老师讲课的口吻，不要像算法说明书。",
-  },
   爆款: {
     focus:
       "围绕「看点前置、强冲突先行、非重点压缩、情绪持续承接」打造高点击高完播脚本。核心原则：选新不选旧、追星写法（新剧从最新剧情切入）、控制总字数约4000字（15分钟视频）、设定5-6个看点分段展开。",
@@ -209,18 +313,89 @@ const OFFICIAL_BASIS = [
   "绝不把经验包装成平台内部算法结论。",
 ].join("\n");
 
+const DEFAULT_CREATOR_IP = "荒哥";
+
+function buildHighRetentionOpeningPrompt(
+  movieTitle: string,
+  creatorIp = DEFAULT_CREATOR_IP,
+  targetChars = "300-400",
+) {
+  return [
+    "### 🎬 高完播率电影解说开头生成提示词",
+    "",
+    `请帮我为电影《${movieTitle}》写一个用于短视频/中视频的高完播率解说开头。`,
+    `博主IP名称是：${creatorIp}`,
+    `整体字数控制在 ${targetChars} 字左右，语速适中，必须尽快锁住观众注意力。`,
+    "直接执行写作任务，不要评价、解释、复述本提示词，不要自称 AI 或模型。",
+    "",
+    buildOpeningRetentionRules(movieTitle, targetChars),
+    "",
+    "请严格按照以下【留存五步法结构】进行撰写：",
+    "",
+    "1. 普适痛点钩子（前3秒留人）：",
+    "先写一个不依赖电影名和人名也成立的情绪痛点、生活场景、反常识困境或人性问题。让陌生观众先觉得「这事跟我有关」或「这情况太反常」。",
+    "",
+    "2. 具体画面落地（把观众带进去）：",
+    "用一个生活化、可视化的场景把痛点落地，不要先介绍主角身份。画面要像观众眼前能看到的一幕，而不是百科说明。",
+    "",
+    "3. 人性困境升级（制造非看不可的悬念）：",
+    "把这个场景升级为一个人性选择、阶层困境、道德悖论或命运反差。用问题推动观众想知道答案，但不要提前抛片名和人名。",
+    "",
+    "4. 自然引出电影（让片名浮出水面）：",
+    "等痛点、画面和困境都立住后，再顺势引出《电影名》和关键人物。引出方式要像答案揭晓，不要像报幕。",
+    "",
+    "5. 价值承诺（最后锁住完播）：",
+    "带出博主IP，并给观众一个继续看下去的理由：这部电影会解释一个扎心的人性真相、社会困境或命运反转。承诺要具体，不要空泛煽情。",
+    "",
+    "语气要求：悬疑、沉稳、充满力量感，不要废话，句句直击痛点。",
+    "",
+    buildOpeningRetentionChecklist(movieTitle),
+  ].join("\n");
+}
+
 function stageFromLegacyStyle(style: string): LearningStage {
   if (style.includes("深度") || style.includes("精选")) return "精选";
   if (style.includes("反转") || style.includes("爆")) return "爆款";
-  return "小白";
+  return "爆款";
+}
+
+function estimateTargetCharsFromDuration(duration: string) {
+  const raw = duration.trim();
+  const match = raw.match(/(\d+(?:\.\d+)?)/);
+  if (!match) return 3000;
+
+  const value = Number(match[1]);
+  if (!Number.isFinite(value) || value <= 0) return 3000;
+
+  // 字数格式（如 "8000字"）直接作为目标字数
+  if (/字/.test(raw)) {
+    return Math.round(value);
+  }
+  if (/秒|s\b|sec/i.test(raw)) {
+    return Math.max(180, Math.round((value / 60) * 210));
+  }
+  if (/分钟|分|min/i.test(raw)) {
+    return Math.max(180, Math.round(value * 210));
+  }
+
+  // UI presets often use bare values for seconds. Treat small numbers as seconds.
+  if (value <= 180) {
+    return Math.max(180, Math.round((value / 60) * 210));
+  }
+  return Math.round(value * 210);
+}
+
+function shouldCorrectLength(targetChars: number, actualChars: number) {
+  return Math.abs(actualChars - targetChars) / targetChars > 0.15;
 }
 
 function buildPlotConstraint(plotContext?: string) {
   if (!plotContext?.trim()) {
     return [
       "当前没有提供联网或文档剧情依据。",
-      "你可以基于常识完成创作，但不得伪造特别具体的人物、情节、结局细节。",
-      "如果你无法确定某个细节，就用更稳妥、更概括的表达。",
+      "硬规则：不得编造任何具体人物、情节、结局、台词、反转、评分或真实事件。",
+      "只能输出可填写的创作结构、提问清单、开头框架和待补剧情占位；必须明确提示用户先提供剧情依据或开启联网搜索。",
+      "如果用户要求生成成稿，也只能生成不含具体剧情事实的模板稿，不得把常识包装成真实剧情。",
     ].join("\n");
   }
 
@@ -232,6 +407,18 @@ function buildPlotConstraint(plotContext?: string) {
     "",
     "【真实剧情依据】",
     plotContext.trim().slice(0, 4000),
+  ].join("\n");
+}
+
+function buildCompactPlotConstraint(plotContext?: string, maxChars = 2200) {
+  if (!plotContext?.trim()) return buildPlotConstraint(plotContext);
+
+  return [
+    "已提供真实剧情依据。开头阶段只需要提炼能支撑钩子的核心设定、人物处境和冲突，不要复述全文。",
+    "硬规则：不得虚构人物、反转、结局、台词或关键事件；允许压缩、重排、提炼。",
+    "",
+    "【真实剧情依据节选】",
+    plotContext.trim().slice(0, maxChars),
   ].join("\n");
 }
 
@@ -261,6 +448,7 @@ function buildStepPrompt(input: ScriptWorkflowStepInput) {
     `阶段方法重点：${stageConfig.focus}`,
     `学员目标：${stageConfig.learnerGoal}`,
     `当前步骤要求：${stepRule}`,
+    input.step === "opening" ? buildHighRetentionOpeningPrompt(input.movieTitle) : "",
     `方法拆解要求：${stageConfig.breakdownRule}`,
     "",
     "用户补充：",
@@ -317,30 +505,203 @@ function buildFinalPrompt(input: CompileFinalScriptInput) {
   ].join("\n");
 }
 
-async function chatCompletion(systemPrompt: string, userPrompt: string) {
-  // 优先使用管理员配置的自定义模型（OpenAI 兼容端点）
-  const cfg = await getActiveAiModel();
-  if (cfg) {
-    return chatCompletionRaw(
-      [
-        { role: "system", content: systemPrompt },
-        { role: "user", content: userPrompt },
-      ],
-      cfg
+async function chatCompletion(
+  systemPrompt: string,
+  userPrompt: string,
+  ctx?: AiUserContext,
+  timeoutMs?: number,
+) {
+  const cfg = await getActiveAiModel(ctx);
+  if (!cfg) {
+    throw new Error(
+      "未配置可用的 AI 模型。请在「我的模型」中添加自己的模型，或联系管理员开放全局模型。"
     );
   }
 
-  // 无自定义模型配置时回退到智谱 SDK（沿用原行为，不中断现有功能）
-  const zai = await getZAI();
-  const completion = await zai.chat.completions.create({
-    messages: [
-      { role: "assistant", content: systemPrompt },
+  return chatCompletionRaw(
+    [
+      { role: "system", content: systemPrompt },
       { role: "user", content: userPrompt },
     ],
-    thinking: { type: "disabled" },
-  });
+    cfg,
+    timeoutMs,
+  );
+}
 
-  return completion.choices[0]?.message?.content ?? "";
+async function humanizeCopy(
+  text: string,
+  kind: HumanizeCopyKind,
+  ctx?: AiUserContext,
+) {
+  const cfg = await getActiveAiModel(ctx);
+  if (!cfg) {
+    throw new Error(
+      "未配置可用的 AI 模型。请在「我的模型」中添加自己的模型，或联系管理员开放全局模型。"
+    );
+  }
+  // 正文/完整文案体积大，给更长超时；开头/标题等短文案用默认超时
+  const timeoutMs =
+    kind === "script" || kind === "workflow-final" ? 60_000 : undefined;
+  try {
+    return await humanizeGeneratedCopy(text, kind, cfg, (msgs, c) =>
+      chatCompletionRaw(msgs, c, timeoutMs),
+    );
+  } catch (e) {
+    console.warn("humanizeCopy failed, returning raw text:", e instanceof Error ? e.message : e);
+    // 降 AI 味失败不阻塞主流程，返回原始文案
+    return text.trim();
+  }
+}
+
+async function humanizeOpeningsBatch(
+  items: string[],
+  ctx?: AiUserContext,
+): Promise<string[]> {
+  if (items.length === 0) return [];
+
+  const cfg = await getActiveAiModel(ctx);
+  if (!cfg) {
+    throw new Error(
+      "未配置可用的 AI 模型。请在「我的模型」中添加自己的模型，或联系管理员开放全局模型。"
+    );
+  }
+
+  const source = items
+    .map((item, idx) => `### OPENING_${idx + 1}\n${item.trim()}`)
+    .join("\n\n");
+  const messages = [
+    {
+      role: "system" as const,
+      content: [
+        "Rewrite Chinese film/short-video openings to sound human and spoken.",
+        "Keep facts, names, plot order, section count, section markers, and meaning.",
+        "Return only rewritten sections. Do not mention AI, tools, detection, or prompts.",
+      ].join("\n"),
+    },
+    {
+      role: "user" as const,
+      content: [
+        "Batch humanize these openings with the mandatory anti-AI-flavor skills.",
+        "Rules: remove template narration, neat AI transitions, inflated emotion, generic praise, and over-polished phrasing. Use plain spoken Chinese, shorter clauses, concrete verbs, and natural rhythm. Do not add facts.",
+        "Keep each marker exactly as ### OPENING_N.",
+        "",
+        source,
+      ].join("\n"),
+    },
+  ];
+
+  try {
+    const raw = await chatCompletionRaw(messages, cfg, 18_000);
+    const parsed = items.map((fallback, idx) => {
+      const marker = `### OPENING_${idx + 1}`;
+      const nextMarker = `### OPENING_${idx + 2}`;
+      const start = raw.indexOf(marker);
+      if (start < 0) return fallback;
+      const contentStart = start + marker.length;
+      const next = raw.indexOf(nextMarker, contentStart);
+      const content = raw.slice(contentStart, next >= 0 ? next : undefined).trim();
+      return content || fallback;
+    });
+    return parsed;
+  } catch (error) {
+    console.warn("opening humanize batch failed", error);
+    return items;
+  }
+}
+
+async function fetchText(url: string, timeoutMs = 12000) {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
+  try {
+    const resp = await fetch(url, {
+      headers: {
+        "User-Agent":
+          "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/120 Safari/537.36",
+        Accept: "text/html,application/xhtml+xml,application/xml;q=0.9,text/plain;q=0.8,*/*;q=0.7",
+      },
+      signal: controller.signal,
+    });
+    if (!resp.ok) return "";
+    return await resp.text();
+  } catch {
+    return "";
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+function htmlToText(raw: string) {
+  return raw
+    .replace(/<script[\s\S]*?<\/script>/gi, "")
+    .replace(/<style[\s\S]*?<\/style>/gi, "")
+    .replace(/<[^>]+>/g, " ")
+    .replace(/&nbsp;/g, " ")
+    .replace(/&amp;/g, "&")
+    .replace(/&lt;/g, "<")
+    .replace(/&gt;/g, ">")
+    .replace(/&#39;/g, "'")
+    .replace(/&quot;/g, '"')
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function extractDuckDuckGoResults(html: string) {
+  const results: Array<{ url: string; name: string; snippet: string; host_name: string }> = [];
+  const itemRegex = /<a[^>]+class="[^"]*result__a[^"]*"[^>]+href="([^"]+)"[^>]*>([\s\S]*?)<\/a>[\s\S]*?<a[^>]*class="[^"]*result__snippet[^"]*"[^>]*>([\s\S]*?)<\/a>/gi;
+  let match: RegExpExecArray | null;
+  while ((match = itemRegex.exec(html)) && results.length < 6) {
+    let url = match[1].replace(/&amp;/g, "&");
+    try {
+      const parsed = new URL(url);
+      const uddg = parsed.searchParams.get("uddg");
+      if (uddg) url = decodeURIComponent(uddg);
+    } catch {
+      // keep original URL
+    }
+    let host = "";
+    try {
+      host = new URL(url).hostname;
+    } catch {
+      host = "";
+    }
+    results.push({
+      url,
+      name: htmlToText(match[2]).slice(0, 120),
+      snippet: htmlToText(match[3]).slice(0, 300),
+      host_name: host,
+    });
+  }
+  return results;
+}
+
+function buildSearchFallbackPrompt(movieTitle: string, genre?: string) {
+  return [
+    "你要为电影剧情资料检索生成搜索摘要，不得编造电影剧情。",
+    `电影名：${movieTitle}`,
+    genre ? `类型：${genre}` : "",
+    "请只输出适合人工检索的关键词和核验清单，不要写剧情成稿。",
+  ]
+    .filter(Boolean)
+    .join("\n");
+}
+
+async function summarizeSearchFallback(
+  movieTitle: string,
+  genre?: string,
+  ctx?: AiUserContext
+) {
+  const cfg = await getActiveAiModel(ctx);
+  if (!cfg) return "";
+  return chatCompletionRaw(
+    [
+      {
+        role: "system",
+        content: "你是电影资料检索助手，只能给搜索关键词和核验清单，不能编造剧情。",
+      },
+      { role: "user", content: buildSearchFallbackPrompt(movieTitle, genre) },
+    ],
+    cfg
+  ).catch(() => "");
 }
 
 function extractJsonObject(raw: string) {
@@ -369,6 +730,7 @@ function normalizeStringList(input: unknown, fallbackPrefix: string) {
 
 export async function generateScriptWorkflowStep(
   input: ScriptWorkflowStepInput,
+  ctx?: AiUserContext,
 ): Promise<ScriptWorkflowStepResult> {
   const systemPrompt = [
     "你是一位同时懂课程设计和抖音电影解说创作的高级导师。",
@@ -378,7 +740,7 @@ export async function generateScriptWorkflowStep(
     OFFICIAL_BASIS,
   ].join("\n");
 
-  const raw = await chatCompletion(systemPrompt, buildStepPrompt(input));
+  const raw = await chatCompletion(systemPrompt, buildStepPrompt(input), ctx);
 
   try {
     const parsed = extractJsonObject(raw) as {
@@ -387,14 +749,16 @@ export async function generateScriptWorkflowStep(
       checklist?: unknown;
     };
 
+    const draft = await humanizeCopy(parsed.draft?.trim() || raw.trim(), "workflow-step", ctx);
     return {
-      draft: parsed.draft?.trim() || raw.trim(),
+      draft,
       breakdown: normalizeStringList(parsed.breakdown, "方法拆解"),
       checklist: normalizeStringList(parsed.checklist, "自检点"),
     };
   } catch {
+    const draft = await humanizeCopy(raw.trim(), "workflow-step", ctx);
     return {
-      draft: raw.trim(),
+      draft,
       breakdown: ["模型未按结构返回，当前已保留成品内容，建议人工再过一遍方法说明。"],
       checklist: ["检查是否忠于剧情依据。", "检查是否符合当前阶段的方法重点。", "检查是否便于口播。"],
     };
@@ -403,6 +767,7 @@ export async function generateScriptWorkflowStep(
 
 export async function compileFinalScriptPackage(
   input: CompileFinalScriptInput,
+  ctx?: AiUserContext,
 ): Promise<CompileFinalScriptResult> {
   const systemPrompt = [
     "你是一位抖音电影解说课程主讲人，要把已确认的三段内容整合成最终交付包。",
@@ -411,7 +776,7 @@ export async function compileFinalScriptPackage(
     OFFICIAL_BASIS,
   ].join("\n");
 
-  const raw = await chatCompletion(systemPrompt, buildFinalPrompt(input));
+  const raw = await chatCompletion(systemPrompt, buildFinalPrompt(input), ctx);
 
   try {
     const parsed = extractJsonObject(raw) as {
@@ -421,15 +786,22 @@ export async function compileFinalScriptPackage(
       tags?: unknown;
     };
 
+    const finalScript = await humanizeCopy(parsed.finalScript?.trim() || raw.trim(), "workflow-final", ctx);
+    const titleSuggestions = await Promise.all(
+      normalizeStringList(parsed.titleSuggestions, "标题建议").map((item) =>
+        humanizeCopy(item, "title", ctx),
+      ),
+    );
     return {
-      finalScript: parsed.finalScript?.trim() || raw.trim(),
+      finalScript,
       methodBreakdown: normalizeStringList(parsed.methodBreakdown, "方法拆解"),
-      titleSuggestions: normalizeStringList(parsed.titleSuggestions, "标题建议"),
+      titleSuggestions,
       tags: normalizeStringList(parsed.tags, "推荐标签").slice(0, 8),
     };
   } catch {
+    const finalScript = await humanizeCopy(raw.trim(), "workflow-final", ctx);
     return {
-      finalScript: raw.trim(),
+      finalScript,
       methodBreakdown: ["模型未按结构返回，当前已保留终稿内容。"],
       titleSuggestions: ["请基于终稿人工补 3 个标题。"],
       tags: ["电影解说", "抖音电影解说", "荒哥说电影"],
@@ -437,7 +809,7 @@ export async function compileFinalScriptPackage(
   }
 }
 
-export async function generateNarrationScript(input: ScriptGenInput) {
+export async function generateNarrationScript(input: ScriptGenInput, ctx?: AiUserContext) {
   const systemPrompt = [
     "你是一位抖音电影解说编剧，遵循「荒哥说电影」方法体系。",
     "你要输出一份电影解说文案，兼顾口播顺滑、剧情清晰和情绪承接。",
@@ -448,9 +820,10 @@ export async function generateNarrationScript(input: ScriptGenInput) {
   const stage = stageFromLegacyStyle(input.style);
   const stageConfig = STAGE_METHODS[stage];
 
-  // 根据时长测算目标字数——电影解说每分钟约 200-220 字
-  const durMatch = input.duration.match(/(\d+)/);
-  const targetWords = durMatch ? parseInt(durMatch[1], 10) * 210 : 3000;
+  // 根据时长测算目标字数：电影解说每分钟约 200-220 字。
+  const targetWords = estimateTargetCharsFromDuration(input.duration);
+
+  const openingTarget = Math.max(80, Math.min(180, Math.round(targetWords * 0.35)));
 
   const userPrompt = [
     `电影：${input.movieTitle}`,
@@ -464,8 +837,12 @@ export async function generateNarrationScript(input: ScriptGenInput) {
     "",
     `阶段：${stage}`,
     `阶段核心方法：${stageConfig.focus}`,
+    `【硬性要求】整篇成稿总字数必须严格控制在 ${Math.floor(targetWords * 0.85)} ~ ${Math.ceil(targetWords * 1.15)} 字之间（开头+正文+结尾合计）。这是最重要的输出规范！`,
     "",
     "【开头规则】",
+    buildHighRetentionOpeningPrompt(input.movieTitle, DEFAULT_CREATOR_IP, `${openingTarget}`),
+    "",
+    "【阶段开头补充规则】",
     stageConfig.openingRule,
     "",
     "【剧情展开规则】",
@@ -486,16 +863,214 @@ export async function generateNarrationScript(input: ScriptGenInput) {
     .filter(Boolean)
     .join("\n");
 
-  return chatCompletion(systemPrompt, userPrompt);
+  console.log(`[ai] narrationScript start, targetWords=${targetWords}`);
+  let output = await chatCompletion(systemPrompt, userPrompt, ctx, 90_000);
+  console.log(`[ai] narrationScript first call done, outputLen=${output.length}`);
+
+  // ---- 字数纠偏：最多重试 2 次，阈值 15% ----
+  for (let correctionRound = 0; correctionRound < 2; correctionRound += 1) {
+    const actualChars = output.trim().length;
+    if (!shouldCorrectLength(targetWords, actualChars)) break;
+    const deviation = Math.abs(actualChars - targetWords) / targetWords;
+    const direction =
+      actualChars > targetWords
+        ? "精简冗余表述，把字数缩减到目标范围。不要删除关键剧情信息。"
+        : "补充细节、氛围描写和心理刻画，把字数扩充到目标范围。不得虚构情节。";
+
+    const retryPrompt = [
+      userPrompt,
+      "",
+      "--- 你刚生成的完整版本 ---",
+      output,
+      "",
+      `【字数校正 第${correctionRound + 1}次】目标字数必须在 ${Math.floor(targetWords * 0.85)} ~ ${Math.ceil(targetWords * 1.15)} 字之间。`,
+      `你当前输出约 ${actualChars} 字（偏差 ${(deviation * 100).toFixed(0)}%），${direction}`,
+      `注意：这是强制要求，不是建议。必须把字数控制在范围内。`,
+    ].join("\n");
+
+    output = await chatCompletion(systemPrompt, retryPrompt, ctx, 90_000);
+    console.log(`[ai] narrationScript correction ${correctionRound + 1} done, outputLen=${output.length}`);
+  }
+
+  return humanizeCopy(output.trim(), "script", ctx);
 }
 
-export async function generateTitles(params: {
-  movieTitle: string;
-  genre: string;
-  count?: number;
-  plotContext?: string;
-  stage?: LearningStage;
-}) {
+/**
+ * 生成 5 个不同风格的开头选项，供用户选择后再续写正文。
+ * 一次 AI 调用产出全部 5 个开头，按标记分割后返回数组。
+ */
+export async function generateMultiOpenings(
+  input: ScriptGenInput,
+  ctx?: AiUserContext,
+): Promise<string[]> {
+  const systemPrompt = [
+    "你是一位抖音电影解说编剧，遵循「荒哥说电影」方法体系。",
+    "你要输出 5 个不同风格的电影解说开头段落，内容必须短、狠、口播顺。",
+    "如果提供了真实剧情依据，必须严格忠于依据，不得虚构情节、人设或结局。",
+  ].join("\n");
+
+  const stage = stageFromLegacyStyle(input.style);
+  const stageConfig = STAGE_METHODS[stage];
+
+  const userPrompt = [
+    `电影：${input.movieTitle}`,
+    `类型：${input.genre}`,
+    `风格：${input.style}`,
+    `钩子方向：${input.hookType}`,
+    `语气：${input.tone}`,
+    input.keywords?.trim() ? `关键词：${input.keywords.trim()}` : "",
+    input.extraNotes?.trim() ? `补充说明：${input.extraNotes.trim()}` : "",
+    "",
+    `阶段：${stage}`,
+    `阶段核心方法：${stageConfig.focus}`,
+    "",
+    buildOpeningRetentionRules(input.movieTitle, "180-260"),
+    "",
+    `请为《${input.movieTitle}》生成 5 个不同风格的电影解说开头段落，每个 180-260 字。`,
+    "要求：",
+    "1. 每个开头都要能自然衔接后续剧情展开",
+    "2. 5 个开头的风格要有明显差异（如悬念提问、情感代入、反差冲击、悲剧渲染、数据震撼等）",
+    "3. 基于真实剧情，不得虚构",
+    "4. 每个开头都必须先用普适痛点、反常设定、日常画面或人性困境抓住陌生观众，再自然引出电影名和具体人物",
+    "5. 如果任一开头第一句话直接出现片名、人名、主角身份、年份背景、评分奖项或电影名场面，必须重写该开头",
+    "",
+    buildOpeningRetentionChecklist(input.movieTitle),
+    "",
+    buildCompactPlotConstraint(input.plotContext),
+    "",
+    "输出格式（严格按此格式）：",
+    "## 开头选项 1 | 风格名称",
+    "[开头内容]",
+    "",
+    "## 开头选项 2 | 风格名称",
+    "[开头内容]",
+    "",
+    "## 开头选项 3 | 风格名称",
+    "[开头内容]",
+    "",
+    "## 开头选项 4 | 风格名称",
+    "[开头内容]",
+    "",
+    "## 开头选项 5 | 风格名称",
+    "[开头内容]",
+  ]
+    .filter(Boolean)
+    .join("\n");
+
+  const raw = await chatCompletion(systemPrompt, userPrompt, ctx, 70_000);
+
+  // 按 "## 开头选项 N | " 分割为数组
+  const items: string[] = [];
+  const parts = raw.split(/##\s*开头选项\s*\d+\s*\|?\s*/).filter(Boolean);
+  for (const p of parts) {
+    const trimmed = p.trim();
+    if (trimmed) items.push(trimmed);
+  }
+  // 如果分出来的数量不对，按换行硬切兜底
+  if (items.length < 3) {
+    const lines = raw.split("\n").filter((l) => l.trim().length > 10);
+    return humanizeOpeningsBatch(lines.slice(0, 5), ctx);
+  }
+  return humanizeOpeningsBatch(items.slice(0, 5), ctx);
+}
+
+/**
+ * 给定已选定的开头，续写正文 + 结尾升华 + 标题建议 + 推荐标签。
+ * 含字数纠偏 (±15% auto-rewrite)。
+ */
+export async function generateBodyFromOpening(
+  input: ScriptGenInput,
+  approvedOpening: string,
+  ctx?: AiUserContext,
+): Promise<string> {
+  const targetWords = estimateTargetCharsFromDuration(input.duration);
+
+  const systemPrompt = [
+    "你是一位抖音电影解说编剧，遵循「荒哥说电影」方法体系。",
+    "开头已经确定，请基于此续写正文、结尾升华等剩余部分。",
+    `【硬性要求】全文（不含已确定的开头）总字数必须严格控制在 ${Math.floor(targetWords * 0.85)} ~ ${Math.ceil(targetWords * 1.15)} 字之间。这是最重要的输出规范，超出范围视为不合格。`,
+    "如果提供了真实剧情依据，必须严格忠于依据，不得虚构情节、人设或结局。",
+    OFFICIAL_BASIS,
+  ].join("\n");
+
+  const stage = stageFromLegacyStyle(input.style);
+  const stageConfig = STAGE_METHODS[stage];
+
+  const userPrompt = [
+    `电影：${input.movieTitle}`,
+    `类型：${input.genre}`,
+    `风格：${input.style}`,
+    `目标字数：约 ${targetWords} 字（±10%）`,
+    `钩子方向：${input.hookType}`,
+    `语气：${input.tone}`,
+    input.keywords?.trim() ? `关键词：${input.keywords.trim()}` : "",
+    input.extraNotes?.trim() ? `补充说明：${input.extraNotes.trim()}` : "",
+    "",
+    `阶段：${stage}`,
+    `阶段核心方法：${stageConfig.focus}`,
+    "",
+    "【已确定的开头】",
+    approvedOpening,
+    "",
+    "【剧情展开规则】",
+    stageConfig.storyRule,
+    "",
+    "【结尾规则】",
+    stageConfig.endingRule,
+    "",
+    buildPlotConstraint(input.plotContext),
+    "",
+    "请基于上面的开头内容续写，输出以下完整结构：",
+    "## 正文",
+    "## 结尾升华",
+    "## 标题建议（输出 3-5 个，每个加一句角度标注）",
+    "## 推荐标签（输出 3-6 个）",
+  ]
+    .filter(Boolean)
+    .join("\n");
+
+  console.log(`[ai] bodyFromOpening start, targetWords=${targetWords}, plotLen=${input.plotContext?.length ?? 0}`);
+  let output = await chatCompletion(systemPrompt, userPrompt, ctx, 90_000);
+  console.log(`[ai] bodyFromOpening first call done, outputLen=${output.length}`);
+
+  // 字数纠偏：最多重试 2 次，阈值 15%
+  for (let correctionRound = 0; correctionRound < 2; correctionRound += 1) {
+    const actualChars = output.trim().length;
+    if (!shouldCorrectLength(targetWords, actualChars)) break;
+    const deviation = Math.abs(actualChars - targetWords) / targetWords;
+    const direction =
+      actualChars > targetWords
+        ? "精简冗余表述，把字数缩减到目标范围。不要删除关键剧情信息。"
+        : "补充细节、氛围描写和心理刻画，把字数扩充到目标范围。不得虚构情节。";
+    const retryPrompt = [
+      userPrompt,
+      "",
+      "--- 你刚生成的完整版本 ---",
+      output,
+      "",
+      `【字数校正 第${correctionRound + 1}次】目标字数必须在 ${Math.floor(targetWords * 0.85)} ~ ${Math.ceil(targetWords * 1.15)} 字之间。`,
+      `你当前输出约 ${actualChars} 字（偏差 ${(deviation * 100).toFixed(0)}%），${direction}`,
+      `注意：这是强制要求，不是建议。必须把字数控制在范围内。`,
+    ].join("\n");
+    output = await chatCompletion(systemPrompt, retryPrompt, ctx, 90_000);
+    console.log(`[ai] bodyFromOpening correction ${correctionRound + 1} done, outputLen=${output.length}`);
+  }
+
+  console.log(`[ai] bodyFromOpening humanizing...`);
+  const humanized = humanizeCopy(output.trim(), "script", ctx);
+  return humanized;
+}
+
+export async function generateTitles(
+  params: {
+    movieTitle: string;
+    genre: string;
+    count?: number;
+    plotContext?: string;
+    stage?: LearningStage;
+  },
+  ctx?: AiUserContext,
+) {
   const count = params.count ?? 8;
   const stage = params.stage ?? "爆款";
   const stageConfig = STAGE_METHODS[stage];
@@ -517,17 +1092,21 @@ export async function generateTitles(params: {
     "请按编号输出标题，每行一个，并在行尾括号标注角度。",
   ].join("\n");
 
-  return chatCompletion(systemPrompt, userPrompt);
+  const output = await chatCompletion(systemPrompt, userPrompt, ctx);
+  return humanizeCopy(output, "title", ctx);
 }
 
-export async function generateHook(params: {
-  movieTitle: string;
-  genre: string;
-  hookType: string;
-  count?: number;
-  plotContext?: string;
-  stage?: LearningStage;
-}) {
+export async function generateHook(
+  params: {
+    movieTitle: string;
+    genre: string;
+    hookType: string;
+    count?: number;
+    plotContext?: string;
+    stage?: LearningStage;
+  },
+  ctx?: AiUserContext,
+) {
   const count = params.count ?? 5;
   const stage = params.stage ?? "爆款";
   const stageConfig = STAGE_METHODS[stage];
@@ -544,22 +1123,38 @@ export async function generateHook(params: {
     `阶段：${stage}`,
     `开头数量：${count}`,
     `钩子方向：${params.hookType}`,
-    `阶段开头规则：${stageConfig.openingRule}`,
+    "以下每个开头版本都必须严格调用并遵循这个提示词：",
+    buildHighRetentionOpeningPrompt(params.movieTitle),
+    "",
+    `阶段开头补充规则：${stageConfig.openingRule}`,
     buildPlotConstraint(params.plotContext),
     "",
-    "请按编号输出，每条尽量控制在一口气能说完的长度。",
+    "请按编号输出，每条都是 300-400 字左右的完整开头，不要只写一句话。",
+    "禁止输出提示词分析、客套话、模型自我介绍或写作建议，只输出可直接口播的成品开头。",
   ].join("\n");
 
-  return chatCompletion(systemPrompt, userPrompt);
+  const output = await chatCompletion(systemPrompt, userPrompt, ctx);
+  return humanizeCopy(output, "hook", ctx);
 }
 
-export async function polishScript(params: {
-  content: string;
-  goal: string;
-  stage?: LearningStage;
-  step?: WorkflowStep | "final";
-}) {
+export async function polishScript(
+  params: {
+    content: string;
+    goal: string;
+    movieTitle?: string;
+    stage?: LearningStage;
+    step?: WorkflowStep | "final";
+  },
+  ctx?: AiUserContext,
+) {
   const stage = params.stage ?? "爆款";
+  const goal = params.goal.toLowerCase();
+  if (goal.includes("降ai") || goal.includes("ai味") || goal.includes("去ai") || goal.includes("口语化")) {
+    return humanizeCopy(params.content.trim(), "polish", ctx);
+  }
+
+  const isOpeningRelated =
+    params.step === "opening" || params.goal.includes("开头") || params.goal.includes("钩子");
   const stepLabel =
     params.step === "opening"
       ? "开头"
@@ -581,6 +1176,9 @@ export async function polishScript(params: {
     `当前部位：${stepLabel}`,
     `润色目标：${params.goal}`,
     `阶段重点：${STAGE_METHODS[stage].focus}`,
+    isOpeningRelated
+      ? `开头改写必须调用并遵循：\n${buildHighRetentionOpeningPrompt(params.movieTitle?.trim() || "当前电影")}`
+      : "",
     "",
     "【原文】",
     params.content.trim(),
@@ -588,7 +1186,8 @@ export async function polishScript(params: {
     "请直接输出润色后的内容，不要解释。",
   ].join("\n");
 
-  return chatCompletion(systemPrompt, userPrompt);
+  const output = await chatCompletion(systemPrompt, userPrompt, ctx);
+  return humanizeCopy(output, "polish", ctx);
 }
 
 export interface PlotSearchResult {
@@ -604,29 +1203,12 @@ export async function searchMoviePlot(
   movieTitle: string,
   genre?: string,
 ): Promise<PlotSearchResult> {
-  const stage1 = await searchMoviePlotStage1(movieTitle, genre);
-  const stage2 = await searchMoviePlotStage2(stage1);
-
-  const combined = [
-    stage2.fullPlot ? `=== 深读全文 ===\n${stage2.fullPlot}` : "",
-    `=== 搜索摘要 ===\n${stage1.snippets}`,
-  ]
-    .filter(Boolean)
-    .join("\n\n");
-
-  return {
-    movieTitle,
-    snippets: stage1.snippets,
-    fullPlot: stage2.fullPlot,
-    combined,
-    sources: stage1.sources,
-    searchedAt: new Date().toISOString(),
-  };
+  return searchMoviePlotWithAgent(movieTitle, genre) as Promise<PlotSearchResult>;
 }
 
 export async function searchMoviePlotStage1(
   movieTitle: string,
-  _genre?: string,
+  genre?: string,
 ): Promise<{
   sources: Array<{ name: string; url: string; host: string; snippet: string }>;
   snippets: string;
@@ -637,33 +1219,21 @@ export async function searchMoviePlotStage1(
     host_name: string;
   }>;
 }> {
-  const zai = await getZAI();
-  const query = `${movieTitle} 电影 剧情简介 详细 结局 解析`;
-  const results = (await zai.functions.invoke("web_search", {
-    query,
-    num: 6,
-  })) as Array<{
-    url: string;
-    name: string;
-    snippet: string;
-    host_name: string;
-  }>;
-
-  const sources = results.map((item) => ({
+  const result = (await searchMoviePlotWithAgent(movieTitle, genre)) as AgentPlotResult;
+  const rawResults = result.sources.map((item) => ({
+    url: item.url,
+    name: item.name,
+    snippet: item.snippet,
+    host_name: item.host,
+  }));
+  const sources = result.sources.map((item) => ({
     name: item.name,
     url: item.url,
-    host: item.host_name,
+    host: item.host,
     snippet: item.snippet,
   }));
 
-  const snippets = results
-    .map(
-      (item, index) =>
-        `【来源${index + 1}：${item.name}｜${item.host_name}】\n${item.snippet}`,
-    )
-    .join("\n\n");
-
-  return { sources, snippets, rawResults: results };
+  return { sources, snippets: result.snippets, rawResults };
 }
 
 export async function searchMoviePlotStage2(stage1: {
@@ -672,9 +1242,8 @@ export async function searchMoviePlotStage2(stage1: {
     name: string;
     snippet: string;
     host_name: string;
-  }>;
+}>;
 }): Promise<{ fullPlot: string; readSource: { name: string; url: string } | null }> {
-  const zai = await getZAI();
   const hostPriority = [
     "baike.baidu",
     "zhuanlan.zhihu",
@@ -692,32 +1261,13 @@ export async function searchMoviePlotStage2(stage1: {
   });
 
   const candidate = ranked[0];
-  if (!candidate) {
+  if (!candidate?.url) {
     return { fullPlot: "", readSource: null };
   }
 
   try {
-    const readPromise = zai.functions.invoke("page_reader", { url: candidate.url });
-    const timeoutPromise = new Promise<never>((_, reject) =>
-      setTimeout(() => reject(new Error("page_reader timeout")), 18000),
-    );
-
-    const read = (await Promise.race([readPromise, timeoutPromise])) as {
-      code: number;
-      data?: { html?: string; title?: string; content?: string };
-    };
-
-    const rawText = read?.data?.html || read?.data?.content || "";
-    const text = rawText
-      .replace(/<script[\s\S]*?<\/script>/gi, "")
-      .replace(/<style[\s\S]*?<\/style>/gi, "")
-      .replace(/<[^>]+>/g, " ")
-      .replace(/&nbsp;/g, " ")
-      .replace(/&amp;/g, "&")
-      .replace(/&lt;/g, "<")
-      .replace(/&gt;/g, ">")
-      .replace(/\s+/g, " ")
-      .trim();
+    const rawText = await fetchText(candidate.url, 18000);
+    const text = htmlToText(rawText);
 
     if (text.length > 300) {
       return {
@@ -731,31 +1281,3 @@ export async function searchMoviePlotStage2(stage1: {
 
   return { fullPlot: "", readSource: null };
 }
-
-export async function generateTTS(params: {
-  text: string;
-  voice?: string;
-  speed?: number;
-}) {
-  const zai = await getZAI();
-  const text = params.text.trim().slice(0, 1000);
-  const response = await zai.audio.tts.create({
-    input: text,
-    voice: params.voice ?? "tongtong",
-    speed: params.speed ?? 1.0,
-    response_format: "wav",
-    stream: false,
-  });
-  const arrayBuffer = await response.arrayBuffer();
-  return Buffer.from(new Uint8Array(arrayBuffer));
-}
-
-export const TTS_VOICES = [
-  { id: "tongtong", name: "彤彤", desc: "温暖亲切", emoji: "🌭" },
-  { id: "chuichui", name: "吹吹", desc: "活泼可爱", emoji: "✨" },
-  { id: "xiaochen", name: "小辰", desc: "沉稳专业", emoji: "🎣" },
-  { id: "jam", name: "Jam", desc: "英音绅士", emoji: "🎺" },
-  { id: "kazi", name: "卡子", desc: "清晰标准", emoji: "📶" },
-  { id: "douji", name: "豆迹", desc: "自然流畅", emoji: "🌀" },
-  { id: "luodo", name: "罗多", desc: "富有感染力", emoji: "🔟" },
-] as const;

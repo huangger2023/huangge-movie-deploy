@@ -2221,6 +2221,7 @@ function AiModelsTab() {
   const [showKey, setShowKey] = React.useState(false);
   const [deleteTarget, setDeleteTarget] = React.useState<AiModelItem | null>(null);
   const [deleting, setDeleting] = React.useState(false);
+  const [testing, setTesting] = React.useState(false);
   const [globalModelPublic, setGlobalModelPublic] = React.useState(true);
   const [togglingPublic, setTogglingPublic] = React.useState(false);
   const [form, setForm] = React.useState<AiModelForm>({
@@ -2289,6 +2290,39 @@ function AiModelsTab() {
     setDialogOpen(true);
   };
 
+  const normalizeBaseUrl = (url: string) =>
+    url.replace(/\/+$/, "").replace(/\/chat\/completions\/?$/i, "");
+
+  const handleTestConnection = async () => {
+    if (!form.baseUrl.trim() || !form.model.trim()) {
+      toast.error("Base URL 和模型名均不能为空");
+      return;
+    }
+    if (!form.apiKey.trim() && !editingId) {
+      toast.error("请先填写 API Key");
+      return;
+    }
+    setTesting(true);
+    try {
+      const res = await fetch("/api/ai/test-connection", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          baseUrl: normalizeBaseUrl(form.baseUrl.trim()),
+          model: form.model.trim(),
+          apiKey: form.apiKey.trim(),
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || `连接失败 (${res.status})`);
+      toast.success("连接成功！模型可用");
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "测试连接失败");
+    } finally {
+      setTesting(false);
+    }
+  };
+
   const handleSave = async () => {
     if (!form.name.trim() || !form.baseUrl.trim() || !form.model.trim()) {
       toast.error("显示名、Base URL、模型名均为必填");
@@ -2303,7 +2337,7 @@ function AiModelsTab() {
     try {
       const body: Record<string, unknown> = {
         name: form.name.trim(),
-        baseUrl: form.baseUrl.trim(),
+        baseUrl: normalizeBaseUrl(form.baseUrl.trim()),
         model: form.model.trim(),
         isDefault: form.isDefault,
       };
@@ -2612,6 +2646,20 @@ function AiModelsTab() {
           <DialogFooter>
             <Button variant="outline" onClick={() => setDialogOpen(false)}>
               取消
+            </Button>
+            <Button
+              variant="secondary"
+              onClick={handleTestConnection}
+              disabled={testing}
+            >
+              {testing ? (
+                <>
+                  <Loader2 className="mr-1.5 h-4 w-4 animate-spin" />
+                  测试中…
+                </>
+              ) : (
+                "测试连接"
+              )}
             </Button>
             <Button onClick={handleSave} disabled={saving}>
               {saving ? (
