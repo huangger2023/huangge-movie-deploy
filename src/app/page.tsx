@@ -1,4 +1,4 @@
-"use client";
+﻿﻿"use client";
 
 import * as React from "react";
 import dynamic from "next/dynamic";
@@ -17,13 +17,25 @@ const DashboardView = dynamic(() => import("@/components/views/dashboard-view").
 const AdminView = dynamic(() => import("@/components/views/admin-view").then(m => ({ default: m.AdminView })), { ssr: false });
 const AuthView = dynamic(() => import("@/components/views/auth-view").then(m => ({ default: m.AuthView })), { ssr: false });
 const WorkspaceView = dynamic(() => import("@/components/views/workspace-view").then(m => ({ default: m.WorkspaceView })), { ssr: false });
+const ProductHomeView = dynamic(() => import("@/components/views/product-home-view").then(m => ({ default: m.ProductHomeView })), { ssr: false });
+const CineflowSuiteView = dynamic(() => import("@/components/views/cineflow-suite-view").then(m => ({ default: m.CineflowSuiteView })), { ssr: false });
+const AiCopywritingView = dynamic(() => import("@/components/views/ai-copywriting-view").then(m => ({ default: m.AiCopywritingView })), { ssr: false });
+const HgttsProView = dynamic(() => import("@/components/views/hgtts-pro-view").then(m => ({ default: m.HgttsProView })), { ssr: false });
+const VisualMatchView = dynamic(() => import("@/components/views/visual-match-view").then(m => ({ default: m.VisualMatchView })), { ssr: false });
+const ResourcesView = dynamic(() => import("@/components/views/resources-view").then(m => ({ default: m.ResourcesView })), { ssr: false });
+const PaymentView = dynamic(() => import("@/components/views/payment-view").then(m => ({ default: m.PaymentView })), { ssr: false });
+const ContactView = dynamic(() => import("@/components/views/contact-view").then(m => ({ default: m.ContactView })), { ssr: false });
+const ActivationView = dynamic(() => import("@/components/views/activation-view").then(m => ({ default: m.ActivationView })), { ssr: false });
+const TalkFenggeView = dynamic(() => import("@/components/views/talk-fengge-view").then(m => ({ default: m.TalkFenggeView })), { ssr: false });
 
 export default function Page() {
   const view = useAppStore((s) => s.view);
   const setUser = useAppStore((s) => s.setUser);
   const [synced, setSynced] = React.useState(false);
+  const [authChecked, setAuthChecked] = React.useState(false);
+  const [needsActivation, setNeedsActivation] = React.useState(false);
 
-  // Sync session user on mount
+  // Sync session user on mount + check authorization
   React.useEffect(() => {
     fetch("/api/auth")
       .then((r) => r.json())
@@ -31,17 +43,46 @@ export default function Page() {
         if (d?.user) setUser(d.user);
       })
       .catch(() => {})
-      .finally(() => setSynced(true));
+      .finally(() => {
+        setSynced(true);
+        // Check authorization status after user sync
+        fetch("/api/authorization")
+          .then((r) => r.json())
+          .then((d) => {
+            if (!d.authRequired || d.activated) {
+              // 授权未开启或已激活，不拦截
+              setNeedsActivation(false);
+            } else if (d.user === null) {
+              // 未登录 → 跳转登录页
+              useAppStore.setState({ view: "auth" });
+              setNeedsActivation(false);
+            } else {
+              // 已登录但未激活 → 拦截到激活页
+              setNeedsActivation(true);
+              useAppStore.setState({ view: "activation" });
+            }
+          })
+          .catch(() => {
+            // Authorization check failed, allow access
+            setNeedsActivation(false);
+          })
+          .finally(() => setAuthChecked(true));
+      });
   }, [setUser]);
+
+  // 授权未开启、或已激活、或正在查看激活/登录页时不拦截
+  const blocked = needsActivation && view !== "activation" && view !== "auth";
 
   return (
     <div className="flex min-h-screen flex-col">
       <Header />
       <main className="flex-1">
-        {!synced ? (
+        {!synced || !authChecked ? (
           <div className="flex h-[60vh] items-center justify-center">
             <div className="h-8 w-8 animate-spin rounded-full border-2 border-primary border-t-transparent" />
           </div>
+        ) : blocked ? (
+          <ActivationView />
         ) : (
           <React.Suspense
             fallback={
@@ -58,6 +99,16 @@ export default function Page() {
             {view === "dashboard" && <DashboardView />}
             {view === "admin" && <AdminView />}
             {view === "auth" && <AuthView />}
+            {view === "product-home" && <ProductHomeView />}
+            {view === "cineflow-suite" && <CineflowSuiteView />}
+            {view === "ai-copywriting" && <AiCopywritingView />}
+            {view === "hgtts-pro" && <HgttsProView />}
+            {view === "visual-match" && <VisualMatchView />}
+            {view === "resources" && <ResourcesView />}
+            {view === "payment" && <PaymentView />}
+            {view === "contact" && <ContactView />}
+            {view === "talk-fengge" && <TalkFenggeView />}
+            {view === "activation" && <ActivationView />}
             {view === "workspace" && <WorkspaceView />}
           </React.Suspense>
         )}
@@ -66,3 +117,4 @@ export default function Page() {
     </div>
   );
 }
+

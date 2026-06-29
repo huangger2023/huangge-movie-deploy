@@ -46,6 +46,8 @@ import {
 import { useAppStore } from "@/lib/store";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
+import { AuthorizationTab } from "@/components/admin/authorization-tab";
+import { FenggeConfigTab } from "@/components/admin/fengge-config-tab";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -463,7 +465,7 @@ export function AdminView() {
           className="mt-8"
         >
           <Tabs defaultValue="courses" className="w-full">
-            <TabsList className="grid h-auto w-full max-w-2xl grid-cols-4 rounded-[2px] border border-border/70 bg-card/40 p-0.5">
+            <TabsList className="grid h-auto w-full max-w-2xl grid-cols-5 rounded-[2px] border border-border/70 bg-card/40 p-0.5">
               <TabsTrigger
                 value="courses"
                 className="gap-1.5 rounded-[2px] py-1.5 font-mono text-[11px] uppercase tracking-[0.08em] data-[state=active]:bg-foreground/10"
@@ -491,6 +493,13 @@ export function AdminView() {
               >
                 <Cpu className="h-3 w-3" />
                 AI 模型
+              </TabsTrigger>
+              <TabsTrigger
+                value="authorization"
+                className="gap-1.5 rounded-[2px] py-1.5 font-mono text-[11px] uppercase tracking-[0.08em] data-[state=active]:bg-foreground/10"
+              >
+                <ShieldCheck className="h-3 w-3" />
+                授权管理
               </TabsTrigger>
             </TabsList>
 
@@ -656,6 +665,11 @@ export function AdminView() {
             <TabsContent value="ai-models" className="mt-4">
               <AiModelsTab />
             </TabsContent>
+
+            {/* 授权管理 Tab */}
+            <TabsContent value="authorization" className="mt-4">
+              <AuthorizationTab />
+            </TabsContent>
           </Tabs>
         </motion.div>
       </div>
@@ -715,6 +729,7 @@ export function AdminView() {
                   setForm((f) => ({ ...f, description: e.target.value }))
                 }
                 placeholder="详细介绍课程内容、适合人群、学习收获等"
+                className="h-28 resize-none overflow-y-auto scrollbar-thin"
                 rows={4}
               />
             </div>
@@ -933,6 +948,7 @@ export function AdminView() {
                   setForm((f) => ({ ...f, highlights: e.target.value }))
                 }
                 placeholder="每行一条，例如：&#10;AI 文案工具授权学员可用&#10;6 年赛道操盘经验沉淀"
+                className="h-24 resize-none overflow-y-auto scrollbar-thin"
                 rows={3}
               />
               <p className="text-[11px] text-muted-foreground">
@@ -1377,7 +1393,7 @@ function LessonForm({
           <MarkdownToolbar textareaRef={contentRef} onChange={setContent} />
         )}
         {previewMode ? (
-          <div className="lesson-preview min-h-[180px] max-h-[320px] overflow-y-auto scrollbar-thin rounded-md border border-border/60 bg-background/60 p-3 text-xs leading-6">
+          <div className="lesson-preview h-[320px] overflow-y-auto scrollbar-thin rounded-md border border-border/60 bg-background/60 p-3 text-xs leading-6">
             {content.trim() ? (
               <ReactMarkdown
                 components={{
@@ -1412,7 +1428,7 @@ function LessonForm({
             value={content}
             onChange={(e) => setContent(e.target.value)}
             placeholder={"课时详细内容，支持 Markdown 格式…\n\n例如：\n## 核心要点\n- 第一点\n- 第二点\n\n> 重点提示：…"}
-            className="min-h-[180px] resize-y scrollbar-thin text-sm font-mono"
+            className="h-[320px] resize-none overflow-y-auto scrollbar-thin text-sm font-mono"
           />
         )}
         <div className="flex items-center justify-between text-[10px] text-muted-foreground">
@@ -2205,6 +2221,8 @@ function AiModelsTab() {
   const [showKey, setShowKey] = React.useState(false);
   const [deleteTarget, setDeleteTarget] = React.useState<AiModelItem | null>(null);
   const [deleting, setDeleting] = React.useState(false);
+  const [globalModelPublic, setGlobalModelPublic] = React.useState(true);
+  const [togglingPublic, setTogglingPublic] = React.useState(false);
   const [form, setForm] = React.useState<AiModelForm>({
     name: "",
     baseUrl: "",
@@ -2220,6 +2238,7 @@ function AiModelsTab() {
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "加载失败");
       setModels(data.models || []);
+      setGlobalModelPublic(data.globalModelPublic !== false);
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "加载模型失败");
     } finally {
@@ -2230,6 +2249,25 @@ function AiModelsTab() {
   React.useEffect(() => {
     fetchModels();
   }, [fetchModels]);
+
+  const handleToggleGlobalPublic = async (value: boolean) => {
+    setTogglingPublic(true);
+    try {
+      const res = await fetch("/api/admin/ai-models", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ globalModelPublic: value }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "切换失败");
+      setGlobalModelPublic(data.globalModelPublic);
+      toast.success(value ? "全局模型已公开" : "全局模型已关闭");
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "切换失败");
+    } finally {
+      setTogglingPublic(false);
+    }
+  };
 
   const openCreate = () => {
     setEditingId(null);
@@ -2356,7 +2394,7 @@ function AiModelsTab() {
             <div>
               <CardTitle className="text-base">AI 模型配置</CardTitle>
               <CardDescription className="text-xs">
-                添加 OpenAI 兼容端点，设其一为默认全局使用（文案 / 助教）。TTS 与联网搜索仍走智谱 SDK
+                添加 OpenAI 兼容端点，设其一为默认全局使用（文案 / 助教）。
               </CardDescription>
             </div>
             <Button size="sm" onClick={openCreate}>
@@ -2365,6 +2403,27 @@ function AiModelsTab() {
             </Button>
           </div>
         </CardHeader>
+
+        {/* 全局模型公开开关 */}
+        <div className="flex items-center justify-between gap-3 border-b bg-muted/20 px-5 py-3">
+          <div className="flex items-center gap-2">
+            <span className={cn("h-2 w-2 rounded-full", globalModelPublic ? "bg-emerald-500" : "bg-amber-500")} />
+            <div>
+              <span className="text-sm font-medium">全局模型公开</span>
+              <span className="ml-2 text-[11px] text-muted-foreground">
+                {globalModelPublic
+                  ? "普通用户可使用管理员配置的全局默认模型"
+                  : "仅管理员可用全局模型，普通用户需配置自己的模型"}
+              </span>
+            </div>
+          </div>
+          <Switch
+            checked={globalModelPublic}
+            disabled={togglingPublic}
+            onCheckedChange={handleToggleGlobalPublic}
+          />
+        </div>
+
         <CardContent className="p-0">
           {loading ? (
             <div className="flex items-center justify-center py-16 text-muted-foreground">
@@ -2599,10 +2658,193 @@ function AiModelsTab() {
         </AlertDialogContent>
       </AlertDialog>
 
+      <XfyunAsrConfigCard />
+
+      <FenggeConfigTab />
+
       <p className="px-1 text-[11px] text-muted-foreground">
         共 {models.length} 个模型 · 最后更新 {models[0] ? formatDate(models[0].updatedAt) : "—"}
       </p>
     </div>
+  );
+}
+
+/* ----------------------- 讯飞 ASR 全局配置 ----------------------- */
+
+function XfyunAsrConfigCard() {
+  const [appId, setAppId] = React.useState("");
+  const [apiKey, setApiKey] = React.useState("");
+  const [apiSecret, setApiSecret] = React.useState("");
+  const [apiKeyMasked, setApiKeyMasked] = React.useState("");
+  const [apiSecretMasked, setApiSecretMasked] = React.useState("");
+  const [configured, setConfigured] = React.useState(false);
+  const [loading, setLoading] = React.useState(true);
+  const [saving, setSaving] = React.useState(false);
+  const [editing, setEditing] = React.useState(false);
+
+  const fetchConfig = React.useCallback(async () => {
+    setLoading(true);
+    try {
+      const res = await fetch("/api/admin/asr-config");
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "加载失败");
+      setAppId(data.appId || "");
+      setApiKeyMasked(data.apiKeyMasked || "");
+      setApiSecretMasked(data.apiSecretMasked || "");
+      setConfigured(data.configured || false);
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "加载讯飞配置失败");
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  React.useEffect(() => {
+    fetchConfig();
+  }, [fetchConfig]);
+
+  const handleSave = async () => {
+    if (!appId.trim() || !apiKey.trim() || !apiSecret.trim()) {
+      toast.error("APPID、API Key、API Secret 均为必填");
+      return;
+    }
+    setSaving(true);
+    try {
+      const res = await fetch("/api/admin/asr-config", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          appId: appId.trim(),
+          apiKey: apiKey.trim(),
+          apiSecret: apiSecret.trim(),
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "保存失败");
+      setApiKeyMasked(data.apiKeyMasked || "");
+      setApiSecretMasked(data.apiSecretMasked || "");
+      setConfigured(true);
+      setEditing(false);
+      setApiKey("");
+      setApiSecret("");
+      toast.success("讯飞 ASR 配置已保存，所有学员可使用");
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "保存失败");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <Card className="p-0">
+      <CardHeader className="border-b px-5 py-4">
+        <div className="flex items-center justify-between gap-3">
+          <div>
+            <CardTitle className="text-base">讯飞语音识别配置</CardTitle>
+            <CardDescription className="text-xs">
+              全局配置讯飞语音听写 API，用于抖音无字幕视频自动转文字。配置后所有学员可直接使用。
+            </CardDescription>
+          </div>
+          <span className={cn("h-2.5 w-2.5 rounded-full", configured ? "bg-emerald-500" : "bg-amber-500")} />
+        </div>
+      </CardHeader>
+      <CardContent className="space-y-3 px-5 py-4">
+        {loading ? (
+          <div className="flex items-center py-4 text-muted-foreground">
+            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+            加载中…
+          </div>
+        ) : editing ? (
+          <>
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+              <div>
+                <Label className="text-xs">APPID</Label>
+                <Input
+                  value={appId}
+                  onChange={(e) => setAppId(e.target.value)}
+                  placeholder="讯飞 APPID"
+                  className="mt-1"
+                />
+              </div>
+              <div>
+                <Label className="text-xs">API Key</Label>
+                <Input
+                  value={apiKey}
+                  onChange={(e) => setApiKey(e.target.value)}
+                  placeholder="讯飞 API Key"
+                  className="mt-1"
+                />
+              </div>
+              <div>
+                <Label className="text-xs">API Secret</Label>
+                <Input
+                  value={apiSecret}
+                  onChange={(e) => setApiSecret(e.target.value)}
+                  placeholder="讯飞 API Secret"
+                  className="mt-1"
+                  type="password"
+                />
+              </div>
+            </div>
+            <div className="flex gap-2">
+              <Button size="sm" onClick={handleSave} disabled={saving}>
+                {saving ? (
+                  <>
+                    <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" />
+                    保存中…
+                  </>
+                ) : (
+                  "保存配置"
+                )}
+              </Button>
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => {
+                  setEditing(false);
+                  setApiKey("");
+                  setApiSecret("");
+                }}
+              >
+                取消
+              </Button>
+            </div>
+          </>
+        ) : (
+          <>
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+              <div>
+                <Label className="text-xs text-muted-foreground">APPID</Label>
+                <p className="mt-1 text-sm font-medium">{appId || "未配置"}</p>
+              </div>
+              <div>
+                <Label className="text-xs text-muted-foreground">API Key</Label>
+                <p className="mt-1 text-sm font-medium">{apiKeyMasked || "未配置"}</p>
+              </div>
+              <div>
+                <Label className="text-xs text-muted-foreground">API Secret</Label>
+                <p className="mt-1 text-sm font-medium">{apiSecretMasked || "未配置"}</p>
+              </div>
+            </div>
+            <Button size="sm" variant="outline" onClick={() => setEditing(true)}>
+              {configured ? "修改配置" : "立即配置"}
+            </Button>
+          </>
+        )}
+        <p className="text-[11px] text-muted-foreground">
+          前往{" "}
+          <a
+            href="https://console.xfyun.cn/services/iat"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-blue-500 hover:underline"
+          >
+            讯飞语音听写控制台
+          </a>
+          {" "}获取 API 密钥（每天500次免费额度）。配置后学员在抖音文案提取时可自动识别无字幕视频。
+        </p>
+      </CardContent>
+    </Card>
   );
 }
 

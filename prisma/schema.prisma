@@ -29,7 +29,11 @@ model User {
   plotDocs     PlotDocument[]
   chatMessages ChatMessage[]
   workspaces   Workspace[]
+  tvSeries     TvSeries[]
   lessonCompletions LessonCompletion[]
+  activation   UserActivation?
+  aiModels     UserAiModel[]
+  fenggeChats  FenggeChat[]
 }
 
 model Course {
@@ -205,4 +209,98 @@ model AiModel {
   isActive  Boolean  @default(true)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+}
+
+// 电视剧系列：管理多集字幕数据，供 AI 基于真实对白创作解说
+model TvSeries {
+  id            String   @id @default(cuid())
+  userId        String
+  title         String   // 剧名
+  totalEpisodes Int      @default(0) // 总集数
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  episodes      Episode[]
+
+  @@index([userId, title])
+}
+
+// 电视剧单集：字幕文件解析结果
+model Episode {
+  id              String   @id @default(cuid())
+  tvSeriesId      String
+  episodeNumber   Int
+  // 原始字幕文本（srt / vtt 原文）
+  subtitleRaw     String
+  // 结构化字幕 JSON：[{ start, end, text }]
+  subtitleParsed  String
+  createdAt       DateTime @default(now())
+
+  tvSeries        TvSeries @relation(fields: [tvSeriesId], references: [id], onDelete: Cascade)
+
+  @@unique([tvSeriesId, episodeNumber])
+}
+
+// 用户自有 AI 模型配置：普通用户可添加自己的 OpenAI 兼容端点，
+// 优先使用自己的模型；未配置时回退到管理员全局默认模型（受公开开关控制）
+model UserAiModel {
+  id        String   @id @default(cuid())
+  userId    String
+  name      String   // 显示名
+  baseUrl   String   // OpenAI 兼容端点
+  apiKey    String   // API Key，明文存，UI 脱敏
+  model     String   // 模型名，如 glm-4-flash
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+// 「和荒哥聊聊」对话历史：按会话维度持久化用户与荒哥的对话（不绑课时）
+model FenggeChat {
+  id        String   @id @default(cuid())
+  userId    String
+  sessionId String
+  role      String   // user | assistant
+  content   String
+  createdAt DateTime @default(now())
+
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, sessionId, createdAt])
+}
+
+// 「和荒哥聊聊」游客限额计数：用 cookie id 关联，软门槛引流
+model FenggeGuest {
+  id        String   @id @default(cuid())
+  turnCount Int      @default(0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+// 系统设置：键值对存储，如授权开关
+model SystemSetting {
+  id        String   @id @default(cuid())
+  key       String   @unique
+  value     String
+  updatedAt DateTime @updatedAt
+}
+
+// 用户授权激活记录：绑定机器码与激活码
+model UserActivation {
+  id          String   @id @default(cuid())
+  userId      String   @unique
+  machineId   String
+  licenseKey  String
+  expireDate  DateTime
+  activatedAt DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([machineId])
 }

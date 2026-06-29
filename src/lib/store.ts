@@ -1,4 +1,4 @@
-﻿"use client";
+﻿﻿"use client";
 
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
@@ -26,9 +26,11 @@ export type ViewKey =
   | "contact"
   | "suite-detail"
   | "tts-clone"
-  | "copywriting-trial";
+  | "copywriting-trial"
+  | "talk-fengge"
+  | "activation";
 
-export type GeneratorStage = "小白" | "爆款" | "精选";
+export type GeneratorStage = "爆款" | "精选";
 
 export interface CurrentUser {
   id: string;
@@ -44,17 +46,23 @@ interface AppState {
   selectedTool: string | null; // for tools view sub-tabs
   generatorPresetStage: GeneratorStage | null;
   generatorPresetMovieTitle: string;
+  generatorPresetGenre: string;
+  generatorPresetKeywords: string;
   user: CurrentUser | null;
   setView: (view: ViewKey) => void;
   openCourse: (id: string) => void;
   openScriptGenerator: (preset?: {
     stage?: GeneratorStage;
     movieTitle?: string;
+    genre?: string;
+    keywords?: string;
   }) => void;
   selectTool: (tool: string) => void;
   setGeneratorPreset: (preset: {
     stage?: GeneratorStage;
     movieTitle?: string;
+    genre?: string;
+    keywords?: string;
   }) => void;
   clearGeneratorPreset: () => void;
   setUser: (user: CurrentUser | null) => void;
@@ -62,6 +70,9 @@ interface AppState {
   /** 用户已点击「一键加群」跳转，标记后不再自动弹出加群弹窗 */
   qqGroupJoined: boolean;
   markQqGroupJoined: () => void;
+  /** 用户在加群弹窗勾选「不再自动弹出」，标记后跨刷新不再自动弹出（仍可从右下角小浮窗手动打开） */
+  qqGroupDismissed: boolean;
+  setQqGroupDismissed: (v: boolean) => void;
 }
 
 export const useAppStore = create<AppState>()(
@@ -72,6 +83,8 @@ export const useAppStore = create<AppState>()(
       selectedTool: null,
       generatorPresetStage: null,
       generatorPresetMovieTitle: "",
+      generatorPresetGenre: "",
+      generatorPresetKeywords: "",
       user: null,
       setView: (view) => {
         set({ view });
@@ -90,6 +103,8 @@ export const useAppStore = create<AppState>()(
           view: "script-generator",
           generatorPresetStage: preset?.stage ?? null,
           generatorPresetMovieTitle: preset?.movieTitle ?? "",
+          generatorPresetGenre: preset?.genre ?? "",
+          generatorPresetKeywords: preset?.keywords ?? "",
         });
         if (typeof window !== "undefined") {
           window.scrollTo({ top: 0, behavior: "smooth" });
@@ -102,9 +117,13 @@ export const useAppStore = create<AppState>()(
             preset.stage === undefined ? state.generatorPresetStage : preset.stage,
           generatorPresetMovieTitle:
             preset.movieTitle ?? state.generatorPresetMovieTitle,
+          generatorPresetGenre:
+            preset.genre ?? state.generatorPresetGenre,
+          generatorPresetKeywords:
+            preset.keywords ?? state.generatorPresetKeywords,
         })),
       clearGeneratorPreset: () =>
-        set({ generatorPresetStage: null, generatorPresetMovieTitle: "" }),
+        set({ generatorPresetStage: null, generatorPresetMovieTitle: "", generatorPresetGenre: "", generatorPresetKeywords: "" }),
       setUser: (user) => set({ user }),
       logout: () =>
         set({
@@ -112,9 +131,13 @@ export const useAppStore = create<AppState>()(
           view: "home",
           generatorPresetStage: null,
           generatorPresetMovieTitle: "",
+          generatorPresetGenre: "",
+          generatorPresetKeywords: "",
         }),
       qqGroupJoined: false,
       markQqGroupJoined: () => set({ qqGroupJoined: true }),
+      qqGroupDismissed: false,
+      setQqGroupDismissed: (v: boolean) => set({ qqGroupDismissed: v }),
     }),
     {
       name: "yingshu-store",
@@ -124,7 +147,10 @@ export const useAppStore = create<AppState>()(
         selectedCourseId: state.selectedCourseId,
         generatorPresetStage: state.generatorPresetStage,
         generatorPresetMovieTitle: state.generatorPresetMovieTitle,
+        generatorPresetGenre: state.generatorPresetGenre,
+        generatorPresetKeywords: state.generatorPresetKeywords,
         qqGroupJoined: state.qqGroupJoined,
+        qqGroupDismissed: state.qqGroupDismissed,
       }),
     }
   )
