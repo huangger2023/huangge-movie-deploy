@@ -20,7 +20,7 @@ export function VoiceChatEntry() {
   return (
     <div className="fixed bottom-6 right-6 z-50">
       <motion.button
-        initial={{ opacity: 0, scale: 0.8 }}
+        initial={{ opacity: 1, scale: 1 }}
         animate={{ opacity: 1, scale: 1 }}
         transition={{ duration: 0.4, ease: "backOut" }}
         onClick={handleClick}
