@@ -4,6 +4,7 @@ import * as React from "react";
 import dynamic from "next/dynamic";
 import { Header } from "@/components/site/header";
 import { Footer } from "@/components/site/footer";
+import { VoiceChatEntry } from "@/components/site/voice-chat-entry";
 import { useAppStore } from "@/lib/store";
 import { toast } from "sonner";
 
@@ -113,7 +114,9 @@ export default function Page() {
           </React.Suspense>
         )}
       </main>
+      <VoiceChatEntry />
       <Footer />
+      <div id="build-marker" style={{display:"none"}} aria-hidden="true">BUILD_VERSION:20260630-v3</div>
     </div>
   );
 }

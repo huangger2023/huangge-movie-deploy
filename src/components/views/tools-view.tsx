@@ -22,6 +22,8 @@ import {
   Search,
   CheckCircle2,
   AlertCircle,
+  Upload,
+  Trash2,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -41,6 +43,15 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { useAppStore } from "@/lib/store";
+import { DoubanSearchButton } from "@/components/site/douban-search-button";
+import { PasteTitleButton } from "@/components/site/paste-title-button";
+import {
+  MIMO_PRESET_VOICES,
+  MIMO_DEFAULT_PRESET_VOICE,
+  MIMO_TTS_MODES,
+  MIMO_DESIGN_PRESETS,
+  type MimoTtsMode,
+} from "@/lib/mimo-voices";
 import { SaveToWorkspaceButton } from "@/components/site/save-to-workspace-dialog";
 import { cn } from "@/lib/utils";
 
@@ -274,16 +285,6 @@ function AgentToggle({
 
 // Mirrored from src/lib/ai.ts (which is server-only) so this client view can
 // render the voice picker without pulling the Node-only SDK into the bundle.
-const TTS_VOICES = [
-  { id: "tongtong", name: "彤彤", desc: "温暖亲切", emoji: "🌸" },
-  { id: "chuichui", name: "吹吹", desc: "活泼可爱", emoji: "✨" },
-  { id: "xiaochen", name: "小辰", desc: "沉稳专业", emoji: "🎙️" },
-  { id: "jam", name: "Jam", desc: "英音绅士", emoji: "🎩" },
-  { id: "kazi", name: "卡子", desc: "清晰标准", emoji: "📻" },
-  { id: "douji", name: "豆叽", desc: "自然流畅", emoji: "🍃" },
-  { id: "luodo", name: "罗多", desc: "富有感染力", emoji: "🔥" },
-] as const;
-
 const GENRES = [
   "剧情",
   "悬疑",
@@ -350,7 +351,7 @@ const TOOLS = [
     icon: Mic,
     color: "from-rose-500 to-pink-500",
   },
-] as const;
+  ] as const;
 
 export function ToolsView() {
   const selectedTool = useAppStore((s) => s.selectedTool);
@@ -504,7 +505,8 @@ export function ToolsView() {
             className="hidden data-[state=active]:block outline-none"
           >
             <TtsTool />
-          </TabsContent>
+            </TabsContent>
+
         </Tabs>
       </div>
     </div>
@@ -576,7 +578,7 @@ function ToolShell({
       <div className="lg:col-span-2 lg:sticky lg:top-20 lg:self-start">
         {form}
       </div>
-      <div className="lg:col-span-3">{result}</div>
+      <div className="min-h-0 lg:col-span-3">{result}</div>
     </motion.div>
   );
 }
@@ -591,7 +593,7 @@ function ResultPlaceholder({
   desc: string;
 }) {
   return (
-    <Card className="flex h-full min-h-[320px] flex-col items-center justify-center gap-3 border-dashed p-8 text-center">
+    <Card className="flex h-[520px] min-h-0 flex-col items-center justify-center gap-3 overflow-hidden border-dashed p-8 text-center sm:h-[640px]">
       <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-muted/60">
         <Icon className="h-7 w-7 text-muted-foreground" />
       </div>
@@ -627,7 +629,7 @@ function Field({
 
 function GeneratingSkeleton({ rows = 6 }: { rows?: number }) {
   return (
-    <Card className="space-y-3 p-5">
+    <Card className="h-[520px] space-y-3 overflow-hidden p-5 sm:h-[640px]">
       {Array.from({ length: rows }).map((_, i) => (
         <div key={i} className="flex items-center gap-3">
           <Skeleton className="h-6 w-6 shrink-0 rounded-md" />
@@ -715,11 +717,16 @@ function TitleTool() {
           </div>
 
           <Field label="电影名称">
-            <Input
-              value={movieTitle}
-              onChange={(e) => setMovieTitle(e.target.value)}
-              placeholder="例如：盗梦空间"
-            />
+            <div className="flex items-center gap-2 flex-nowrap">
+              <Input
+                value={movieTitle}
+                onChange={(e) => setMovieTitle(e.target.value)}
+                placeholder="例如：盗梦空间"
+                className="flex-1"
+              />
+              <PasteTitleButton onPasteText={setMovieTitle} />
+              <DoubanSearchButton mode="home" movieTitle={movieTitle} />
+            </div>
           </Field>
 
           <Field label="电影类型">
@@ -772,8 +779,8 @@ function TitleTool() {
         loading ? (
           <GeneratingSkeleton rows={count} />
         ) : output ? (
-          <Card className="overflow-hidden">
-            <div className="flex items-center justify-between border-b border-border/60 px-5 py-3">
+          <Card className="flex h-[520px] min-h-0 flex-col overflow-hidden sm:h-[640px]">
+            <div className="flex shrink-0 items-center justify-between border-b border-border/60 px-5 py-3">
               <div className="flex items-center gap-2 text-sm font-medium">
                 <ListOrdered className="h-4 w-4 text-primary" />
                 生成结果
@@ -792,7 +799,7 @@ function TitleTool() {
                 <CopyButton text={output} label="整体复制" />
               </div>
             </div>
-            <div className="max-h-[640px] overflow-y-auto scrollbar-thin p-3">
+            <div className="min-h-0 flex-1 overflow-y-auto scrollbar-thin p-3">
               <ul className="space-y-2">
                 {items.map((item, i) => (
                   <li
@@ -895,11 +902,16 @@ function HookTool() {
           </div>
 
           <Field label="电影名称">
-            <Input
-              value={movieTitle}
-              onChange={(e) => setMovieTitle(e.target.value)}
-              placeholder="例如：肖申克的救赎"
-            />
+            <div className="flex items-center gap-2 flex-nowrap">
+              <Input
+                value={movieTitle}
+                onChange={(e) => setMovieTitle(e.target.value)}
+                placeholder="例如：肖申克的救赎"
+                className="flex-1"
+              />
+              <PasteTitleButton onPasteText={setMovieTitle} />
+              <DoubanSearchButton mode="home" movieTitle={movieTitle} />
+            </div>
           </Field>
 
           <Field label="电影类型">
@@ -967,8 +979,8 @@ function HookTool() {
         loading ? (
           <GeneratingSkeleton rows={count} />
         ) : items.length > 0 ? (
-          <div>
-            <div className="mb-2 flex items-center justify-end gap-1.5">
+          <div className="flex h-[520px] min-h-0 flex-col sm:h-[680px]">
+            <div className="mb-2 flex shrink-0 items-center justify-end gap-1.5">
               <SaveToWorkspaceButton
                 field="hooks"
                 value={items.map((it, i) => `${i + 1}. ${it}`).join("\n")}
@@ -981,7 +993,7 @@ function HookTool() {
                 label="整体复制"
               />
             </div>
-            <div className="max-h-[680px] space-y-3 overflow-y-auto scrollbar-thin pr-1">
+            <div className="min-h-0 flex-1 space-y-3 overflow-y-auto scrollbar-thin pr-1">
               {items.map((item, i) => (
                 <Card
                   key={i}
@@ -1066,11 +1078,16 @@ function PolishTool() {
           </div>
 
           <Field label="电影名称" hint="可选">
-            <Input
-              value={movieTitle}
-              onChange={(e) => setMovieTitle(e.target.value)}
-              placeholder="可选，便于 AI 理解语境"
-            />
+            <div className="flex items-center gap-2 flex-nowrap">
+              <Input
+                value={movieTitle}
+                onChange={(e) => setMovieTitle(e.target.value)}
+                placeholder="可选，便于 AI 理解语境"
+                className="flex-1"
+              />
+              <PasteTitleButton onPasteText={setMovieTitle} />
+              <DoubanSearchButton mode="home" movieTitle={movieTitle} />
+            </div>
           </Field>
 
           <Field label="润色目标">
@@ -1093,7 +1110,7 @@ function PolishTool() {
               value={content}
               onChange={(e) => setContent(e.target.value)}
               placeholder="粘贴你的解说文案，AI 会保留剧情信息并全面提升表现力…"
-              className="min-h-[180px] resize-y"
+              className="h-[220px] resize-none overflow-y-auto scrollbar-thin"
             />
           </Field>
 
@@ -1118,7 +1135,7 @@ function PolishTool() {
       }
       result={
         loading ? (
-          <Card className="space-y-3 p-5">
+          <Card className="h-[520px] space-y-3 overflow-hidden p-5 sm:h-[640px]">
             <Skeleton className="h-5 w-24" />
             <Skeleton className="h-4 w-full" />
             <Skeleton className="h-4 w-11/12" />
@@ -1128,8 +1145,8 @@ function PolishTool() {
             <Skeleton className="h-4 w-5/6" />
           </Card>
         ) : output ? (
-          <div>
-            <div className="mb-2 flex items-center justify-end gap-1.5">
+          <div className="flex h-[520px] min-h-0 flex-col sm:h-[640px]">
+            <div className="mb-2 flex shrink-0 items-center justify-end gap-1.5">
               <SaveToWorkspaceButton
                 field="script"
                 value={output}
@@ -1137,9 +1154,9 @@ function PolishTool() {
                 label="存入工作台"
               />
             </div>
-            <div className="grid gap-4 md:grid-cols-2">
-              <Card className="flex h-full flex-col p-4">
-                <div className="mb-3 flex items-center justify-between">
+            <div className="grid min-h-0 flex-1 gap-4 md:grid-cols-2">
+              <Card className="flex min-h-0 flex-col overflow-hidden p-4">
+                <div className="mb-3 flex shrink-0 items-center justify-between">
                   <span className="flex items-center gap-1.5 text-sm font-medium text-muted-foreground">
                     <Clapperboard className="h-4 w-4" />
                     原文案
@@ -1148,19 +1165,19 @@ function PolishTool() {
                     {content.trim().length} 字
                   </Badge>
                 </div>
-                <div className="flex-1 overflow-y-auto scrollbar-thin whitespace-pre-wrap break-words rounded-lg bg-muted/30 p-3 text-sm leading-relaxed text-muted-foreground">
+                <div className="min-h-0 flex-1 overflow-y-auto scrollbar-thin whitespace-pre-wrap break-words rounded-lg bg-muted/30 p-3 text-sm leading-relaxed text-muted-foreground">
                   {content}
                 </div>
               </Card>
-              <Card className="flex h-full flex-col border-primary/30 p-4">
-                <div className="mb-3 flex items-center justify-between">
+              <Card className="flex min-h-0 flex-col overflow-hidden border-primary/30 p-4">
+                <div className="mb-3 flex shrink-0 items-center justify-between">
                   <span className="flex items-center gap-1.5 text-sm font-medium text-primary">
                     <Sparkles className="h-4 w-4" />
                     润色后
                   </span>
                   <CopyButton text={output} label="复制润色稿" />
                 </div>
-                <div className="flex-1 overflow-y-auto scrollbar-thin whitespace-pre-wrap break-words rounded-lg bg-primary/5 p-3 text-sm leading-relaxed">
+                <div className="min-h-0 flex-1 overflow-y-auto scrollbar-thin whitespace-pre-wrap break-words rounded-lg bg-primary/5 p-3 text-sm leading-relaxed">
                   {output}
                 </div>
               </Card>
@@ -1183,13 +1200,16 @@ function PolishTool() {
 /* ------------------------------------------------------------------ */
 
 function TtsTool() {
+  const [mode, setMode] = React.useState<MimoTtsMode>("preset");
   const [text, setText] = React.useState("");
-  const [voice, setVoice] = React.useState<string>(TTS_VOICES[0].id);
+  const [voice, setVoice] = React.useState<string>(MIMO_DEFAULT_PRESET_VOICE);
   const [speed, setSpeed] = React.useState(1.0);
+  const [designPrompt, setDesignPrompt] = React.useState("");
+  const [refFile, setRefFile] = React.useState<File | null>(null);
   const [loading, setLoading] = React.useState(false);
   const [audioUrl, setAudioUrl] = React.useState<string | null>(null);
+  const textCharCount = React.useMemo(() => text.trim().length, [text]);
 
-  // Revoke object URL when it changes or on unmount
   React.useEffect(() => {
     return () => {
       if (audioUrl) URL.revokeObjectURL(audioUrl);
@@ -1197,20 +1217,40 @@ function TtsTool() {
   }, [audioUrl]);
 
   const run = async () => {
-    if (!text.trim()) {
-      toast.error("请输入要试听的文案");
-      return;
-    }
+    const trimmed = text.trim();
+    if (!trimmed) { toast.error("请输入要试听的文案"); return; }
+    if (mode === "clone" && !refFile) { toast.error("请上传参考音频"); return; }
+    if (mode === "design" && !designPrompt.trim()) { toast.error("请描述想要的音色风格"); return; }
     setLoading(true);
     try {
-      const res = await fetch("/api/ai/tts", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ text: text.trim(), voice, speed }),
-      });
+      let res;
+      if (mode === "clone") {
+        const form = new FormData();
+        form.append("mode", "clone");
+        form.append("text", trimmed);
+        if (designPrompt.trim()) form.append("style", designPrompt.trim());
+        if (refFile) form.append("reference", refFile);
+        res = await fetch("/api/ai/tts", { method: "POST", body: form });
+      } else {
+        res = await fetch("/api/ai/tts", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            mode, text: trimmed,
+            presetVoice: mode === "preset" ? voice : undefined,
+            speed: mode === "preset" ? speed : undefined,
+            style: mode === "design" ? designPrompt.trim() : undefined,
+          }),
+        });
+      }
       if (!res.ok) {
-        const data = await res.json().catch(() => ({}));
-        throw new Error(data.error || "语音合成失败");
+        const d = await res.json().catch(() => ({}));
+        throw new Error(
+          d.error ||
+            (res.status === 429
+              ? "音色复刻当前请求过于频繁或额度受限，请稍等 1-2 分钟后重试"
+              : "语音合成失败")
+        );
       }
       const blob = await res.blob();
       const url = URL.createObjectURL(blob);
@@ -1218,8 +1258,14 @@ function TtsTool() {
       toast.success("语音合成完成");
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "语音合成失败");
-    } finally {
-      setLoading(false);
+    } finally { setLoading(false); }
+  };
+
+  const clearText = () => {
+    setText("");
+    if (audioUrl) {
+      URL.revokeObjectURL(audioUrl);
+      setAudioUrl(null);
     }
   };
 
@@ -1233,147 +1279,179 @@ function TtsTool() {
             </div>
             <div>
               <h2 className="text-sm font-semibold">语音试听</h2>
-              <p className="text-xs text-muted-foreground">
-                挑出最适合你账号的声线
-              </p>
+              <p className="text-xs text-muted-foreground">预置音色 / 音色设计 / 音色复刻</p>
             </div>
           </div>
 
-          <Field label="待试听文案" hint="最多 1000 字">
+          <div className="grid grid-cols-3 gap-1.5 rounded-lg bg-muted/40 p-1">
+            {MIMO_TTS_MODES.map((m) => {
+              const active = mode === m.key;
+              return (
+                <button key={m.key} type="button" onClick={() => setMode(m.key)}
+                  className={cn("flex flex-col items-center gap-0.5 rounded-md px-2 py-2 text-center transition-all",
+                    active ? "bg-background text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground")}>
+                  <span className="text-base leading-none">{m.emoji}</span>
+                  <span className="text-[11px] font-medium">{m.label}</span>
+                </button>
+              );
+            })}
+          </div>
+
+          <Field label="待合成文案" hint="不限字数">
+            <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
+              <div className="flex items-center gap-2">
+                <PasteTitleButton
+                  label="粘贴文案"
+                  onPasteText={setText}
+                  disabled={loading}
+                  className="h-8"
+                />
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={clearText}
+                  disabled={loading || !text}
+                  className="h-8 gap-1.5 rounded-[2px] px-2.5 text-xs"
+                >
+                  <Trash2 className="h-3.5 w-3.5" />
+                  <span className="hidden sm:inline">清空</span>
+                </Button>
+              </div>
+              <span className="rounded-[2px] border border-border/70 bg-background/50 px-2 py-1 font-mono text-[11px] text-muted-foreground">
+                约 {textCharCount.toLocaleString("zh-CN")} 字
+              </span>
+            </div>
             <Textarea
               value={text}
-              onChange={(e) => setText(e.target.value.slice(0, 1000))}
-              placeholder="粘贴一段解说文案，听听 AI 配音的效果…"
-              className="min-h-[140px] resize-y"
+              onChange={(e) => setText(e.target.value)}
+              placeholder="粘贴电影解说文案，可长可短。长文案会自动分段合成，仍导出一段完整音频…"
+              className="h-[220px] resize-none overflow-y-auto scrollbar-thin"
             />
+            <p className="text-[11px] text-muted-foreground">
+              字数不限，长文案自动分段合成，最终拼成一段完整音频。
+            </p>
           </Field>
 
-          <Field label="音色选择">
-            <div className="grid grid-cols-2 gap-2">
-              {TTS_VOICES.map((v) => {
-                const isActive = voice === v.id;
-                return (
-                  <button
-                    key={v.id}
-                    type="button"
-                    onClick={() => setVoice(v.id)}
-                    className={cn(
-                      "flex items-center gap-2 rounded-lg border p-2.5 text-left transition-all",
-                      isActive
-                        ? "border-primary bg-primary/10 ring-1 ring-primary"
-                        : "border-border bg-muted/30 hover:border-primary/40 hover:bg-muted/50"
-                    )}
-                  >
-                    <span className="text-xl">{v.emoji}</span>
-                    <span className="min-w-0 flex-1">
-                      <span className="block truncate text-xs font-medium">
-                        {v.name}
-                      </span>
-                      <span className="block truncate text-[11px] text-muted-foreground">
-                        {v.desc}
-                      </span>
-                    </span>
-                    {isActive && (
-                      <Check className="h-3.5 w-3.5 shrink-0 text-primary" />
-                    )}
-                  </button>
-                );
-              })}
-            </div>
-          </Field>
+          {mode === "preset" && (
+            <>
+              <Field label="预置音色">
+                <div className="grid grid-cols-2 gap-2">
+                  {MIMO_PRESET_VOICES.map((v) => {
+                    const a = voice === v.id;
+                    return (
+                      <button key={v.id} type="button" onClick={() => setVoice(v.id)}
+                        className={cn("flex items-center gap-2 rounded-lg border p-2.5 text-left transition-all",
+                          a ? "border-primary bg-primary/10 ring-1 ring-primary" : "border-border bg-muted/30 hover:border-primary/40 hover:bg-muted/50")}>
+                        <span className="text-xl">{v.emoji}</span>
+                        <span className="min-w-0 flex-1">
+                          <span className="block truncate text-xs font-medium">{v.name}</span>
+                          <span className="block truncate text-[11px] text-muted-foreground">{v.desc}</span>
+                        </span>
+                        {a && <Check className="h-3.5 w-3.5 shrink-0 text-primary" />}
+                      </button>
+                    );
+                  })}
+                </div>
+              </Field>
+              <Field label="语速" hint={`${speed.toFixed(1)}x`}>
+                <Slider value={[speed]} min={0.5} max={2.0} step={0.1} onValueChange={(v) => setSpeed(v[0])} />
+              </Field>
+            </>
+          )}
 
-          <Field label="语速" hint={`${speed.toFixed(1)}x`}>
-            <Slider
-              value={[speed]}
-              min={0.5}
-              max={2.0}
-              step={0.1}
-              onValueChange={(v) => setSpeed(v[0])}
-            />
-          </Field>
+          {mode === "design" && (
+            <Field label="音色风格描述" hint="自然语言">
+              <div className="flex flex-wrap gap-1.5">
+                {MIMO_DESIGN_PRESETS.map((p) => {
+                  const a = designPrompt === p.prompt;
+                  return (
+                    <button key={p.id} type="button" onClick={() => setDesignPrompt(a ? "" : p.prompt)}
+                      className={cn("inline-flex items-center gap-1 rounded-full border px-2.5 py-1 text-[11px] font-medium transition-all",
+                        a ? "border-primary bg-primary/10 text-primary" : "border-border/70 bg-muted/30 text-muted-foreground hover:border-primary/40 hover:text-foreground")}>
+                      <span className="leading-none">{p.emoji}</span>{p.label}
+                    </button>
+                  );
+                })}
+              </div>
+              <Textarea value={designPrompt} onChange={(e) => setDesignPrompt(e.target.value.slice(0, 300))}
+                placeholder="例如：年轻男性磁性嗓音，节奏明快，略带兴奋…" className="h-[96px] resize-none overflow-y-auto scrollbar-thin" />
+              <p className="text-[11px] text-muted-foreground">点击上方类型快速填入，或自己写一句音色描述。</p>
+            </Field>
+          )}
 
-          <Button
-            onClick={run}
-            disabled={loading}
-            className="w-full bg-gradient-to-r from-rose-500 to-pink-500 text-white hover:opacity-90"
-          >
-            {loading ? (
-              <>
-                <Loader2 className="h-4 w-4 animate-spin" />
-                合成中…
-              </>
-            ) : (
-              <>
-                <Volume2 className="h-4 w-4" />
-                立即试听
-              </>
-            )}
+          {mode === "clone" && (
+            <Field label="参考音频" hint="≤5MB · wav/mp3/m4a/webm">
+              <label className={cn("flex cursor-pointer flex-col items-center justify-center gap-2 rounded-xl border border-dashed p-6 text-center transition-colors",
+                refFile ? "border-primary/50 bg-primary/5" : "border-border hover:border-primary/40 hover:bg-muted/40")}>
+                <Upload className="h-6 w-6 text-muted-foreground" />
+                {refFile ? (
+                  <div className="min-w-0">
+                    <p className="truncate text-xs font-medium">{refFile.name}</p>
+                    <p className="text-[11px] text-muted-foreground">{(refFile.size / 1024 / 1024).toFixed(2)} MB · 点击重选</p>
+                  </div>
+                ) : (
+                  <div>
+                    <p className="text-xs font-medium">点击上传参考音频</p>
+                    <p className="mt-0.5 text-[11px] text-muted-foreground">上传一段目标声音，复刻同款声线</p>
+                  </div>
+                )}
+                <input type="file" accept="audio/wav,audio/mpeg,audio/mp3,audio/mp4,audio/m4a,audio/x-m4a,audio/webm,audio/ogg"
+                  className="hidden" onChange={(e) => {
+                    const f = e.target.files?.[0] ?? null;
+                    if (f && f.size > 5 * 1024 * 1024) { toast.error("参考音频过大，请控制在 5MB 以内"); setRefFile(null); }
+                    else { setRefFile(f); }
+                  }} />
+              </label>
+              <p className="text-[11px] text-muted-foreground">建议上传 10~30 秒清晰人声，复刻效果更稳。</p>
+            </Field>
+          )}
+
+          <Button onClick={run} disabled={loading}
+            className="w-full bg-gradient-to-r from-rose-500 to-pink-500 text-white hover:opacity-90">
+            {loading ? <><Loader2 className="h-4 w-4 animate-spin" />合成中…</> : <><Volume2 className="h-4 w-4" />立即试听</>}
           </Button>
         </Card>
       }
       result={
         loading ? (
-          <Card className="flex h-full min-h-[320px] flex-col items-center justify-center gap-4 p-8">
+          <Card className="flex h-[520px] min-h-0 flex-col items-center justify-center gap-4 overflow-hidden p-8 sm:h-[640px]">
             <div className="flex h-16 w-16 items-center justify-center rounded-full bg-primary/10">
               <Loader2 className="h-7 w-7 animate-spin text-primary" />
             </div>
             <div className="text-center">
               <p className="font-medium">正在合成语音…</p>
-              <p className="mt-1 text-sm text-muted-foreground">
-                AI 正在为你生成电影级声线，请稍候
-              </p>
+              <p className="mt-1 text-sm text-muted-foreground">长文案会分段合成，请稍候</p>
             </div>
             <div className="flex gap-1">
               {[0, 1, 2].map((i) => (
-                <span
-                  key={i}
-                  className="h-2 w-2 animate-bounce rounded-full bg-primary"
-                  style={{ animationDelay: `${i * 0.15}s` }}
-                />
+                <span key={i} className="h-2 w-2 animate-bounce rounded-full bg-primary" style={{ animationDelay: `${i * 0.15}s` }} />
               ))}
             </div>
           </Card>
         ) : audioUrl ? (
-          <Card className="overflow-hidden">
-            <div className="flex items-center justify-between border-b border-border/60 px-5 py-3">
+          <Card className="flex h-[520px] min-h-0 flex-col overflow-hidden sm:h-[640px]">
+            <div className="flex shrink-0 items-center justify-between border-b border-border/60 px-5 py-3">
               <div className="flex items-center gap-2 text-sm font-medium">
-                <Volume2 className="h-4 w-4 text-primary" />
-                试听结果
+                <Volume2 className="h-4 w-4 text-primary" />试听结果
               </div>
               <a href={audioUrl} download="yingshu-tts.wav">
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="h-7 gap-1.5 px-2 text-xs"
-                >
-                  <Download className="h-3.5 w-3.5" />
-                  下载
+                <Button variant="ghost" size="sm" className="h-7 gap-1.5 px-2 text-xs">
+                  <Download className="h-3.5 w-3.5" />下载
                 </Button>
               </a>
             </div>
-            <div className="space-y-4 p-5">
-              <audio controls src={audioUrl} className="w-full">
-                您的浏览器不支持音频播放。
-              </audio>
+            <div className="min-h-0 flex-1 space-y-4 overflow-y-auto scrollbar-thin p-5">
+              <audio controls src={audioUrl} className="w-full">您的浏览器不支持音频播放。</audio>
               <div className="rounded-lg bg-muted/30 p-3">
-                <p className="mb-1 text-xs font-medium text-muted-foreground">
-                  试听文案
-                </p>
-                <p className="line-clamp-4 whitespace-pre-wrap break-words text-sm leading-relaxed text-muted-foreground">
-                  {text}
-                </p>
+                <p className="mb-1 text-xs font-medium text-muted-foreground">试听文案</p>
+                <p className="h-[180px] overflow-y-auto scrollbar-thin whitespace-pre-wrap break-words text-sm leading-relaxed text-muted-foreground">{text}</p>
               </div>
-              <p className="text-xs text-muted-foreground">
-                提示：满意后可下载 wav 音频文件，导入剪辑软件即可直接使用。
-              </p>
+              <p className="text-xs text-muted-foreground">提示：满意后可下载 wav 音频文件，导入剪辑软件即可直接使用。</p>
             </div>
           </Card>
         ) : (
-          <ResultPlaceholder
-            icon={Mic}
-            title="还没有试听音频"
-            desc="粘贴文案、选择音色与语速后点击立即试听"
-          />
+          <ResultPlaceholder icon={Mic} title="还没有试听音频" desc="切换模式、填好文案后点击立即试听" />
         )
       }
     />
