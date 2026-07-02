@@ -193,7 +193,7 @@ export function WorkspaceView() {
             animate={{ opacity: 1, scale: 1 }}
             className="mb-6 flex h-20 w-20 items-center justify-center rounded-full bg-gradient-to-br from-green-500 to-blue-500 shadow-glow-primary"
           >
-            <FolderKanban className="h-10 w-10 text-green-600 dark:text-green-400-foreground" />
+            <FolderKanban className="h-10 w-10 text-white" />
           </motion.div>
           <h2 className="mb-2 text-2xl font-bold">登录后使用创作工作台</h2>
           <p className="mb-6 text-sm text-muted-foreground">

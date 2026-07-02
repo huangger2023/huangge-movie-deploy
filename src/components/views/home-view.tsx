@@ -304,7 +304,7 @@ export function HomeView() {
               <Button
                 size="lg"
                 onClick={() => setView("script-generator")}
-                className="group h-12 rounded-full bg-gradient-to-r from-green-500 to-blue-500 px-7 text-base text-green-600 dark:text-green-400-foreground shadow-glow-primary"
+                className="group h-12 rounded-full bg-gradient-to-r from-green-500 to-blue-500 px-7 text-base text-white shadow-glow-primary"
               >
                 <Sparkles className="mr-2 h-5 w-5" />
                 立即体验 AI 文案生成
@@ -492,7 +492,7 @@ export function HomeView() {
                       </p>
                       <div className="flex items-center justify-between border-t border-border/60 pt-3">
                         <div className="flex items-center gap-2">
-                          <div className={cn("flex h-6 w-6 items-center justify-center rounded-full bg-gradient-to-br text-[10px] font-bold text-green-600 dark:text-green-400-foreground", typeMeta.color)}>
+                          <div className={cn("flex h-6 w-6 items-center justify-center rounded-full bg-gradient-to-br text-[10px] font-bold text-white", typeMeta.color)}>
                             {item.author.slice(0, 1)}
                           </div>
                           <span className="text-xs text-muted-foreground">
@@ -598,7 +598,7 @@ export function HomeView() {
             <Button
               size="lg"
               onClick={() => setView("courses")}
-              className="mt-8 h-12 rounded-full bg-gradient-to-r from-green-500 to-blue-500 px-7 text-green-600 dark:text-green-400-foreground"
+              className="mt-8 h-12 rounded-full bg-gradient-to-r from-green-500 to-blue-500 px-7 text-white"
             >
               开始系统学习
               <ArrowRight className="ml-2 h-4 w-4" />
@@ -614,7 +614,7 @@ export function HomeView() {
                   {t.content}
                 </p>
                 <div className="mt-4 flex items-center gap-3">
-                  <div className="flex h-10 w-10 items-center justify-center rounded-full bg-gradient-to-br from-green-500 to-blue-500 text-sm font-bold text-green-600 dark:text-green-400-foreground">
+                  <div className="flex h-10 w-10 items-center justify-center rounded-full bg-gradient-to-br from-green-500 to-blue-500 text-sm font-bold text-white">
                     {t.avatar}
                   </div>
                   <div>
@@ -651,7 +651,7 @@ export function HomeView() {
             <Button
               size="lg"
               onClick={() => setView("auth")}
-              className="h-12 rounded-full bg-gradient-to-r from-green-500 to-blue-500 px-8 text-base text-green-600 dark:text-green-400-foreground shadow-glow-primary"
+              className="h-12 rounded-full bg-gradient-to-r from-green-500 to-blue-500 px-8 text-base text-white shadow-glow-primary"
             >
               免费注册开始
               <ArrowRight className="ml-2 h-4 w-4" />

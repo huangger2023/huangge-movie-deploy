@@ -1671,7 +1671,7 @@ function StudentsTab({ courses }: { courses: AdminCourse[] }) {
                 className="flex items-center gap-4 border-b border-border/40 p-4 transition-colors hover:bg-muted/30"
               >
                 {/* 头像 */}
-                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-green-500 to-blue-500 text-sm font-bold text-green-600 dark:text-green-400-foreground">
+                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-green-500 to-blue-500 text-sm font-bold text-white">
                   {s.name.slice(0, 1)}
                 </div>
                 {/* 信息 */}
@@ -2024,7 +2024,7 @@ function EnrollmentsTab({ courses }: { courses: AdminCourse[] }) {
               >
                 {/* 用户头像 + 信息 */}
                 <div className="flex min-w-0 flex-1 items-center gap-3">
-                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-green-500 to-blue-500 text-sm font-bold text-green-600 dark:text-green-400-foreground">
+                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-green-500 to-blue-500 text-sm font-bold text-white">
                     {e.user.name?.slice(0, 1) || "?"}
                   </div>
                   <div className="min-w-0">

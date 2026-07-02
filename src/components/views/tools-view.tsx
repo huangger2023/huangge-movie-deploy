@@ -195,7 +195,7 @@ function AgentToggle({
     <div className="rounded-xl border border-green-500/20 bg-gradient-to-br from-green-500/[0.04] to-accent/[0.04] p-3">
       <div className="flex items-center gap-2">
         <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-gradient-to-br from-green-500 to-blue-500">
-          <Bot className="h-4 w-4 text-green-600 dark:text-green-400-foreground" />
+          <Bot className="h-4 w-4 text-white" />
         </div>
         <div className="flex-1">
           <p className="text-xs font-semibold">Agent 联网搜索真实剧情</p>

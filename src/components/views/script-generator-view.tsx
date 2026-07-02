@@ -619,7 +619,7 @@ export function ScriptGeneratorView() {
                   size="lg"
                   className={cn(
                     "h-12 w-full gap-2 rounded-xl bg-gradient-to-r from-green-500 to-blue-500",
-                    "text-base font-semibold text-green-600 dark:text-green-400-foreground shadow-glow-primary",
+                    "text-base font-semibold text-white shadow-glow-primary",
                     "transition-all hover:opacity-95 active:scale-[0.99]"
                   )}
                 >
@@ -1717,7 +1717,7 @@ function StoryboardTable({ content }: { content: string }) {
         <Button
           size="sm"
           onClick={handleExport}
-          className="ml-auto h-7 gap-1.5 rounded-full bg-gradient-to-r from-green-500 to-blue-500 px-3 text-xs text-green-600 dark:text-green-400-foreground"
+          className="ml-auto h-7 gap-1.5 rounded-full bg-gradient-to-r from-green-500 to-blue-500 px-3 text-xs text-white"
         >
           <Download className="h-3.5 w-3.5" />
           导出分镜表
