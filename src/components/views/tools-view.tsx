@@ -782,7 +782,7 @@ function TitleTool() {
           <Card className="flex h-[520px] min-h-0 flex-col overflow-hidden sm:h-[640px]">
             <div className="flex shrink-0 items-center justify-between border-b border-border/60 px-5 py-3">
               <div className="flex items-center gap-2 text-sm font-medium">
-                <ListOrdered className=h-4 w-4 text-green-600 dark:text-green-400" />
+                <ListOrdered className="h-4 w-4 text-green-600 dark:text-green-400" />
                 生成结果
                 <Badge variant="secondary" className="text-xs">
                   {items.length} 条
@@ -1348,7 +1348,7 @@ function TtsTool() {
                           <span className="block truncate text-xs font-medium">{v.name}</span>
                           <span className="block truncate text-[11px] text-muted-foreground">{v.desc}</span>
                         </span>
-                        {a && <Check className=h-3.5 w-3.5 shrink-0 text-green-600 dark:text-green-400" />}
+                        {a && <Check className="h-3.5 w-3.5 shrink-0 text-green-600 dark:text-green-400" />}
                       </button>
                     );
                   })}

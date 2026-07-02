@@ -619,7 +619,7 @@ export function DashboardView() {
                     <Card className="p-5">
                       <CardHeader className="px-0 pt-0">
                         <CardTitle className="flex items-center gap-2 text-sm">
-                          <LayoutDashboard className=h-4 w-4 text-green-600 dark:text-green-400" />
+                          <LayoutDashboard className="h-4 w-4 text-green-600 dark:text-green-400" />
                           工具使用分布
                         </CardTitle>
                         <CardDescription className="text-xs">

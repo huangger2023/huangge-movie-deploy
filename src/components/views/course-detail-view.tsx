@@ -369,7 +369,7 @@ export function CourseDetailView() {
                   </div>
                   <div className="min-w-0 flex-1">
                     <div className="flex items-center gap-1.5">
-                      <GraduationCap className=h-4 w-4 shrink-0 text-green-600 dark:text-green-400" />
+                      <GraduationCap className="h-4 w-4 shrink-0 text-green-600 dark:text-green-400" />
                       <span className="font-semibold">{course.instructor}</span>
                     </div>
                     <p className="mt-1 line-clamp-2 text-xs leading-relaxed text-muted-foreground">

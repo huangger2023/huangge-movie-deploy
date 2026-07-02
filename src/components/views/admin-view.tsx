@@ -1130,7 +1130,7 @@ function LessonsManager({
       <DialogContent className="max-h-[90vh] max-w-3xl overflow-y-auto scrollbar-thin">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
-            <ListChecks className=h-4 w-4 text-green-600 dark:text-green-400" />
+            <ListChecks className="h-4 w-4 text-green-600 dark:text-green-400" />
             课时管理 · {course.title}
           </DialogTitle>
           <DialogDescription>
