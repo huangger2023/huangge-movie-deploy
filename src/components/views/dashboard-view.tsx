@@ -163,7 +163,7 @@ export function DashboardView() {
             transition={{ duration: 0.4 }}
             className="mb-6 flex h-20 w-20 items-center justify-center rounded-full bg-gradient-to-br from-green-500 to-blue-500 shadow-glow-primary"
           >
-            <LogIn className="h-10 w-10 text-primary-foreground" />
+            <LogIn className="h-10 w-10 text-green-600 dark:text-green-400-foreground" />
           </motion.div>
           <h2 className="mb-2 text-2xl font-bold">登录后查看我的学习</h2>
           <p className="mb-6 text-sm text-muted-foreground">
@@ -320,7 +320,7 @@ export function DashboardView() {
           <Card className="glass-card overflow-hidden">
             <CardContent className="flex flex-col gap-4 p-5 sm:flex-row sm:items-center sm:justify-between sm:p-6">
               <div className="flex items-center gap-4">
-                <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-green-500 to-blue-500 text-xl font-bold text-primary-foreground shadow-glow-primary">
+                <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-green-500 to-blue-500 text-xl font-bold text-green-600 dark:text-green-400-foreground shadow-glow-primary">
                   {user.name.slice(0, 1)}
                 </div>
                 <div className="min-w-0">

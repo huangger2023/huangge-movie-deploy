@@ -770,7 +770,7 @@ export function AdminView() {
                       className="h-full w-full object-cover"
                     />
                     {form.coverImage === url && (
-                      <div className="absolute inset-0 flex items-center justify-center bg-primary/30">
+                      <div className="absolute inset-0 flex items-center justify-center bg-green-500/30">
                         <ImageIcon className="h-5 w-5 text-white" />
                       </div>
                     )}
@@ -1156,7 +1156,7 @@ function LessonsManager({
                 layout
                 initial={{ opacity: 0, y: 4 }}
                 animate={{ opacity: 1, y: 0 }}
-                className="group flex items-start gap-3 rounded-lg border border-border/60 bg-card/40 p-3 transition-all hover:border-primary/30"
+                className="group flex items-start gap-3 rounded-lg border border-border/60 bg-card/40 p-3 transition-all hover:border-green-500/30"
               >
                 <div className="flex flex-col gap-0.5">
                   <button
@@ -1357,7 +1357,7 @@ function LessonForm({
     <motion.div
       initial={{ opacity: 0, y: 8 }}
       animate={{ opacity: 1, y: 0 }}
-      className="space-y-3 rounded-lg border border-primary/30 bg-primary/5 p-4"
+      className="space-y-3 rounded-lg border border-green-500/30 bg-green-500/5 p-4"
     >
       <div className="flex items-center justify-between">
         <p className="text-sm font-semibold">
@@ -1418,7 +1418,7 @@ function LessonForm({
                   li: ({ children }) => <li>{children}</li>,
                   strong: ({ children }) => <strong className="font-semibold text-green-600 dark:text-green-400">{children}</strong>,
                   blockquote: ({ children }) => (
-                    <blockquote className="my-2 border-l-2 border-primary/40 bg-primary/5 px-3 py-1.5 italic">
+                    <blockquote className="my-2 border-l-2 border-green-500/40 bg-green-500/5 px-3 py-1.5 italic">
                       {children}
                     </blockquote>
                   ),
@@ -1671,7 +1671,7 @@ function StudentsTab({ courses }: { courses: AdminCourse[] }) {
                 className="flex items-center gap-4 border-b border-border/40 p-4 transition-colors hover:bg-muted/30"
               >
                 {/* 头像 */}
-                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-green-500 to-blue-500 text-sm font-bold text-primary-foreground">
+                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-green-500 to-blue-500 text-sm font-bold text-green-600 dark:text-green-400-foreground">
                   {s.name.slice(0, 1)}
                 </div>
                 {/* 信息 */}
@@ -2024,7 +2024,7 @@ function EnrollmentsTab({ courses }: { courses: AdminCourse[] }) {
               >
                 {/* 用户头像 + 信息 */}
                 <div className="flex min-w-0 flex-1 items-center gap-3">
-                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-green-500 to-blue-500 text-sm font-bold text-primary-foreground">
+                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-green-500 to-blue-500 text-sm font-bold text-green-600 dark:text-green-400-foreground">
                     {e.user.name?.slice(0, 1) || "?"}
                   </div>
                   <div className="min-w-0">

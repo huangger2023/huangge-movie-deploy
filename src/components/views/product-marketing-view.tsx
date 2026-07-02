@@ -422,7 +422,7 @@ export function ProductMarketingView({ pageKey }: { pageKey: ProductKey }) {
             {page.lead}
           </p>
           {page.quote && (
-            <blockquote className="mt-6 border-l-2 border-primary/30 pl-4 text-base italic text-foreground/80">
+            <blockquote className="mt-6 border-l-2 border-green-500/30 pl-4 text-base italic text-foreground/80">
               "{page.quote}"
             </blockquote>
           )}
@@ -478,7 +478,7 @@ export function ProductMarketingView({ pageKey }: { pageKey: ProductKey }) {
                       key={ci}
                       className={cn(
                         "p-5 transition-all hover:shadow-soft",
-                        card.featured && "border-primary/30 ring-1 ring-primary/20"
+                        card.featured && "border-green-500/30 ring-1 ring-green-500/20"
                       )}
                     >
                       {card.tag && (
@@ -522,7 +522,7 @@ export function ProductMarketingView({ pageKey }: { pageKey: ProductKey }) {
                       key={ci}
                       className={cn(
                         "p-5 transition-all hover:shadow-soft",
-                        card.featured && "border-primary/30 ring-1 ring-primary/20"
+                        card.featured && "border-green-500/30 ring-1 ring-green-500/20"
                       )}
                     >
                       {card.tag && (

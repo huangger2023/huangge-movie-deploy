@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import * as React from "react";
 import { motion } from "framer-motion";
@@ -192,10 +192,10 @@ function AgentToggle({
   genre?: string;
 }) {
   return (
-    <div className="rounded-xl border border-blue-500/20 bg-gradient-to-br from-blue-500/[0.04] to-purple-500/[0.04] p-3">
+    <div className="rounded-xl border border-green-500/20 bg-gradient-to-br from-green-500/[0.04] to-accent/[0.04] p-3">
       <div className="flex items-center gap-2">
-        <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-gradient-to-br from-blue-500 to-purple-500">
-          <Bot className="h-4 w-4 text-primary-foreground" />
+        <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-gradient-to-br from-green-500 to-blue-500">
+          <Bot className="h-4 w-4 text-green-600 dark:text-green-400-foreground" />
         </div>
         <div className="flex-1">
           <p className="text-xs font-semibold">Agent 联网搜索真实剧情</p>
@@ -257,12 +257,12 @@ function AgentToggle({
           {agent.searching && (
             <div className="mt-2 flex items-center gap-1.5 text-[10px] text-muted-foreground">
               <div className="flex items-center gap-1">
-                <span className={cn("h-1.5 w-1.5 rounded-full", agent.stage === "search" ? "bg-blue-500 animate-pulse" : "bg-emerald-500")} />
+                <span className={cn("h-1.5 w-1.5 rounded-full", agent.stage === "search" ? "bg-green-500 animate-pulse" : "bg-emerald-500")} />
                 联网搜索
               </div>
               <span className="text-muted-foreground/40">→</span>
               <div className="flex items-center gap-1">
-                <span className={cn("h-1.5 w-1.5 rounded-full", agent.stage === "read" ? "bg-blue-500 animate-pulse" : agent.stage === "done" ? "bg-emerald-500" : "bg-muted")} />
+                <span className={cn("h-1.5 w-1.5 rounded-full", agent.stage === "read" ? "bg-green-500 animate-pulse" : agent.stage === "done" ? "bg-emerald-500" : "bg-muted")} />
                 深度读取
               </div>
               <span className="text-muted-foreground/40">→</span>
@@ -388,7 +388,7 @@ export function ToolsView() {
         >
           <Badge
             variant="outline"
-            className="mb-4 gap-1.5 border-blue-500/30 bg-blue-500/10 px-3 py-1 text-blue-600 dark:text-blue-400"
+            className="mb-4 gap-1.5 border-green-500/30 bg-green-500/10 px-3 py-1 text-green-600 dark:text-green-400"
           >
             <Wand className="h-3.5 w-3.5" />
             自研辅助创作工具链
@@ -444,7 +444,7 @@ export function ToolsView() {
                     className={cn(
                       "mt-3 flex items-center text-xs font-medium transition-opacity",
                       isActive
-                        ? text-blue-600 dark:text-blue-400 opacity-100"
+                        ? "text-green-600 dark:text-green-400 opacity-100"
                         : "text-muted-foreground opacity-0 group-hover:opacity-100"
                     )}
                   >
@@ -804,7 +804,7 @@ function TitleTool() {
                 {items.map((item, i) => (
                   <li
                     key={i}
-                    className="group flex items-start gap-3 rounded-lg border border-border/50 bg-muted/30 px-3 py-2.5 transition-colors hover:border-primary/40 hover:bg-primary/5"
+                    className="group flex items-start gap-3 rounded-lg border border-border/50 bg-muted/30 px-3 py-2.5 transition-colors hover:border-green-500/40 hover:bg-green-500/5"
                   >
                     <span className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-md bg-green-500/15 text-[11px] font-semibold text-green-600 dark:text-green-400">
                       {i + 1}
@@ -1169,7 +1169,7 @@ function PolishTool() {
                   {content}
                 </div>
               </Card>
-              <Card className="flex min-h-0 flex-col overflow-hidden border-primary/30 p-4">
+              <Card className="flex min-h-0 flex-col overflow-hidden border-green-500/30 p-4">
                 <div className="mb-3 flex shrink-0 items-center justify-between">
                   <span className="flex items-center gap-1.5 text-sm font-medium text-green-600 dark:text-green-400">
                     <Sparkles className="h-4 w-4" />
@@ -1177,7 +1177,7 @@ function PolishTool() {
                   </span>
                   <CopyButton text={output} label="复制润色稿" />
                 </div>
-                <div className="min-h-0 flex-1 overflow-y-auto scrollbar-thin whitespace-pre-wrap break-words rounded-lg bg-primary/5 p-3 text-sm leading-relaxed">
+                <div className="min-h-0 flex-1 overflow-y-auto scrollbar-thin whitespace-pre-wrap break-words rounded-lg bg-green-500/5 p-3 text-sm leading-relaxed">
                   {output}
                 </div>
               </Card>
@@ -1342,7 +1342,7 @@ function TtsTool() {
                     return (
                       <button key={v.id} type="button" onClick={() => setVoice(v.id)}
                         className={cn("flex items-center gap-2 rounded-lg border p-2.5 text-left transition-all",
-                          a ? "border-green-500 bg-green-500/10 ring-1 ring-green-500" : "border-border bg-muted/30 hover:border-primary/40 hover:bg-muted/50")}>
+                          a ? "border-green-500 bg-green-500/10 ring-1 ring-primary" : "border-border bg-muted/30 hover:border-green-500/40 hover:bg-muted/50")}>
                         <span className="text-xl">{v.emoji}</span>
                         <span className="min-w-0 flex-1">
                           <span className="block truncate text-xs font-medium">{v.name}</span>
@@ -1368,7 +1368,7 @@ function TtsTool() {
                   return (
                     <button key={p.id} type="button" onClick={() => setDesignPrompt(a ? "" : p.prompt)}
                       className={cn("inline-flex items-center gap-1 rounded-full border px-2.5 py-1 text-[11px] font-medium transition-all",
-                        a ? "border-green-500 bg-green-500/10 text-green-600 dark:text-green-400" : "border-border/70 bg-muted/30 text-muted-foreground hover:border-green-500/40/40 hover:text-foreground")}>
+                        a ? "border-green-500 bg-green-500/10 text-green-600 dark:text-green-400" : "border-border/70 bg-muted/30 text-muted-foreground hover:border-green-500/40 hover:text-foreground")}>
                       <span className="leading-none">{p.emoji}</span>{p.label}
                     </button>
                   );
@@ -1383,7 +1383,7 @@ function TtsTool() {
           {mode === "clone" && (
             <Field label="参考音频" hint="≤5MB · wav/mp3/m4a/webm">
               <label className={cn("flex cursor-pointer flex-col items-center justify-center gap-2 rounded-xl border border-dashed p-6 text-center transition-colors",
-                refFile ? "border-primary/50 bg-primary/5" : "border-border hover:border-primary/40 hover:bg-muted/40")}>
+                refFile ? "border-green-500/50 bg-green-500/5" : "border-border hover:border-green-500/40 hover:bg-muted/40")}>
                 <Upload className="h-6 w-6 text-muted-foreground" />
                 {refFile ? (
                   <div className="min-w-0">
@@ -1416,7 +1416,7 @@ function TtsTool() {
       result={
         loading ? (
           <Card className="flex h-[520px] min-h-0 flex-col items-center justify-center gap-4 overflow-hidden p-8 sm:h-[640px]">
-            <div className="flex h-16 w-16 items-center justify-center rounded-full bg-primary/10">
+            <div className="flex h-16 w-16 items-center justify-center rounded-full bg-green-500/10">
               <Loader2 className="h-7 w-7 animate-spin text-green-600 dark:text-green-400" />
             </div>
             <div className="text-center">
@@ -1425,7 +1425,7 @@ function TtsTool() {
             </div>
             <div className="flex gap-1">
               {[0, 1, 2].map((i) => (
-                <span key={i} className="h-2 w-2 animate-bounce rounded-full bg-blue-500" style={{ animationDelay: `${i * 0.15}s` }} />
+                <span key={i} className="h-2 w-2 animate-bounce rounded-full bg-green-500" style={{ animationDelay: `${i * 0.15}s` }} />
               ))}
             </div>
           </Card>

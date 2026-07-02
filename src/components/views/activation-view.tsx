@@ -135,7 +135,7 @@ export function ActivationView() {
       >
         {/* 头部 */}
         <div className="mb-8 text-center">
-          <div className="mb-4 inline-flex h-16 w-16 items-center justify-center rounded-2xl bg-primary/10">
+          <div className="mb-4 inline-flex h-16 w-16 items-center justify-center rounded-2xl bg-green-500/10">
             <ShieldCheck className="h-8 w-8 text-green-600 dark:text-green-400" />
           </div>
           <h1 className="font-display text-2xl font-bold tracking-tight">

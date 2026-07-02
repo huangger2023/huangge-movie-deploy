@@ -193,7 +193,7 @@ export function WorkspaceView() {
             animate={{ opacity: 1, scale: 1 }}
             className="mb-6 flex h-20 w-20 items-center justify-center rounded-full bg-gradient-to-br from-green-500 to-blue-500 shadow-glow-primary"
           >
-            <FolderKanban className="h-10 w-10 text-primary-foreground" />
+            <FolderKanban className="h-10 w-10 text-green-600 dark:text-green-400-foreground" />
           </motion.div>
           <h2 className="mb-2 text-2xl font-bold">登录后使用创作工作台</h2>
           <p className="mb-6 text-sm text-muted-foreground">
@@ -342,7 +342,7 @@ export function WorkspaceView() {
                     "flex shrink-0 items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs transition-all",
                     statusFilter === opt.id
                       ? "border-green-500 bg-green-500 text-white shadow-sm"
-                      : "border-border/60 bg-card/60 text-muted-foreground hover:border-primary/40 hover:text-foreground"
+                      : "border-border/60 bg-card/60 text-muted-foreground hover:border-green-500/40 hover:text-foreground"
                   )}
                 >
                   {opt.label}
@@ -350,7 +350,7 @@ export function WorkspaceView() {
                     className={cn(
                       "rounded-full px-1.5 py-px text-[10px]",
                       statusFilter === opt.id
-                        ? "bg-primary-foreground/20"
+                        ? "bg-green-500-foreground/20"
                         : "bg-muted"
                     )}
                   >
@@ -696,7 +696,7 @@ function DuplicateForm({
           </p>
         </div>
       </div>
-      <div className="flex items-center gap-1.5 rounded-lg bg-primary/5 px-3 py-2 text-xs text-muted-foreground">
+      <div className="flex items-center gap-1.5 rounded-lg bg-green-500/5 px-3 py-2 text-xs text-muted-foreground">
         <CopyPlus className="h-3.5 w-3.5 shrink-0 text-green-600 dark:text-green-400" />
         <span>
           源项目「{sourceTitle}」→ 新项目「{newTitle || "未命名"}」，状态重置为草稿
@@ -1003,7 +1003,7 @@ function WorkspaceEditor({
                   "flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-xs font-medium transition-all",
                   activeTab === t.key
                     ? "border-green-500 bg-green-500/10 text-green-600 dark:text-green-400 shadow-sm"
-                    : "border-border/60 text-muted-foreground hover:border-primary/40 hover:text-foreground"
+                    : "border-border/60 text-muted-foreground hover:border-green-500/40 hover:text-foreground"
                 )}
               >
                 {filled ? (
