@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import * as React from "react";
 import { motion } from "framer-motion";
@@ -88,6 +88,7 @@ interface CourseDetail {
   lessonsCount: number;
   tags: string;
   highlights: string;
+  _count?: { enrollments: number };
 }
 
 interface Enrollment {
@@ -266,7 +267,7 @@ export function CourseDetailView() {
   };
 
   const handleLessonClick = (lesson: Lesson) => {
-    if (lesson.isPreview || enrollment) {
+    if (lesson.isPreview || enrollment || user?.role === "ADMIN") {
       setExpandedId((cur) => (cur === lesson.id ? null : lesson.id));
       return;
     }
@@ -358,7 +359,7 @@ export function CourseDetailView() {
 
                 {/* 讲师信息卡 */}
                 <Card className="glass-card flex items-center gap-4 p-4">
-                  <div className="flex h-14 w-14 shrink-0 items-center justify-center overflow-hidden rounded-full bg-gradient-to-br from-primary to-accent text-lg font-bold text-primary-foreground">
+                  <div className="flex h-14 w-14 shrink-0 items-center justify-center overflow-hidden rounded-full bg-gradient-to-br from-green-500 to-blue-500 text-lg font-bold text-primary-foreground">
                     {course.instructorAvatar ? (
                        
                       <img src={course.instructorAvatar} alt={course.instructor} className="h-full w-full object-cover" />
@@ -368,7 +369,7 @@ export function CourseDetailView() {
                   </div>
                   <div className="min-w-0 flex-1">
                     <div className="flex items-center gap-1.5">
-                      <GraduationCap className="h-4 w-4 shrink-0 text-primary" />
+                      <GraduationCap className=h-4 w-4 shrink-0 text-green-600 dark:text-green-400" />
                       <span className="font-semibold">{course.instructor}</span>
                     </div>
                     <p className="mt-1 line-clamp-2 text-xs leading-relaxed text-muted-foreground">
@@ -380,7 +381,7 @@ export function CourseDetailView() {
                 {/* 课程描述 */}
                 <Card className="p-5">
                   <h2 className="mb-3 flex items-center gap-2 text-base font-semibold">
-                    <Sparkles className="h-4 w-4 text-primary" />
+                    <Sparkles className="h-4 w-4 text-green-600 dark:text-green-400" />
                     课程介绍
                   </h2>
                   <p className="whitespace-pre-line text-sm leading-7 text-foreground/85">
@@ -398,7 +399,7 @@ export function CourseDetailView() {
                     <ul className="grid gap-2.5 sm:grid-cols-2">
                       {safeParseArr(course.highlights).map((h, i) => (
                         <li key={i} className="flex items-start gap-2 text-sm leading-relaxed">
-                          <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
+                          <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-green-600 dark:text-green-400" />
                           <span className="text-foreground/85">{h}</span>
                         </li>
                       ))}
@@ -410,7 +411,7 @@ export function CourseDetailView() {
                 <Card className="overflow-hidden">
                   <div className="flex items-center justify-between border-b border-border/60 p-5">
                     <h2 className="flex items-center gap-2 text-base font-semibold">
-                      <PlayCircle className="h-4 w-4 text-primary" />
+                      <PlayCircle className="h-4 w-4 text-green-600 dark:text-green-400" />
                       课程目录
                     </h2>
                     <div className="flex items-center gap-2 text-xs text-muted-foreground">
@@ -471,8 +472,8 @@ export function CourseDetailView() {
                 <div className="lg:sticky lg:top-6 space-y-4">
                   {/* 报名卡 */}
                   <Card className="glass-card overflow-hidden">
-                    <div className="border-b border-border/60 bg-gradient-to-br from-primary/10 to-accent/10 p-5">
-                      {enrollment ? (
+                    <div className="border-b border-border/60 bg-gradient-to-br from-green-500/10 to-blue-500/10 p-5">
+                      {enrollment || user?.role === "ADMIN" ? (
                         <div>
                           <div className="mb-2 inline-flex items-center gap-1.5 rounded-full bg-emerald-500/15 px-2.5 py-0.5 text-xs font-medium text-emerald-600 dark:text-emerald-400">
                             <CheckCircle2 className="h-3.5 w-3.5" />
@@ -481,14 +482,14 @@ export function CourseDetailView() {
                           <div className="mb-3">
                             <div className="mb-1.5 flex items-center justify-between text-xs text-muted-foreground">
                               <span>学习进度</span>
-                              <span className="font-semibold text-primary">
+                              <span className="font-semibold text-green-600 dark:text-green-400">
                                 {Math.round(enrollment.progress)}%
                               </span>
                             </div>
                             <Progress value={enrollment.progress} className="h-2" />
                           </div>
                           <Button
-                            className="h-11 w-full gap-1.5 bg-gradient-to-r from-primary to-accent text-primary-foreground shadow-glow-primary"
+                            className="h-11 w-full gap-1.5 bg-gradient-to-r from-green-500 to-blue-500 text-white shadow-glow-primary"
                             onClick={() => {
                               const next = lessons.find((l) => l.id === enrollment.lastLessonId) || lessons[0];
                               if (next) {
@@ -508,7 +509,7 @@ export function CourseDetailView() {
                               <span className="text-3xl font-extrabold text-emerald-600">免费</span>
                             ) : (
                               <>
-                                <span className="text-3xl font-extrabold text-primary">¥{course.price}</span>
+                                <span className="text-3xl font-extrabold text-orange-600 dark:text-orange-400">¥{course.price}</span>
                                 {course.originalPrice && course.originalPrice > course.price && (
                                   <span className="text-sm text-muted-foreground line-through">
                                     ¥{course.originalPrice}
@@ -523,7 +524,7 @@ export function CourseDetailView() {
                             </p>
                           )}
                           <Button
-                            className="h-11 w-full gap-1.5 bg-gradient-to-r from-primary to-accent text-primary-foreground shadow-glow-primary"
+                            className="h-11 w-full gap-1.5 bg-gradient-to-r from-green-500 to-blue-500 text-white shadow-glow-primary"
                             onClick={handleEnroll}
                             disabled={enrolling}
                           >
@@ -561,7 +562,7 @@ export function CourseDetailView() {
                       <InfoRow
                         icon={Users}
                         label="学员数"
-                        value={<span className="font-semibold">{course.studentsCount.toLocaleString()} 人</span>}
+                        value={<span className="font-semibold">{(course._count?.enrollments ?? 0).toLocaleString()} 人</span>}
                       />
                       <InfoRow
                         icon={PlayCircle}
@@ -614,7 +615,7 @@ export function CourseDetailView() {
                           toast.success(favorited ? "已取消收藏" : "已加入收藏");
                         }}
                       >
-                        <Heart className={cn("h-4 w-4", favorited && "fill-primary text-primary")} />
+                        <Heart className={cn("h-4 w-4", favorited && "fill-primary text-green-600 dark:text-green-400")} />
                         {favorited ? "已收藏" : "收藏"}
                       </Button>
                       <Button
@@ -640,7 +641,7 @@ export function CourseDetailView() {
                     <ul className="space-y-1.5 text-xs text-foreground/75">
                       {["报名后永久回看", "社群答疑 + 1对1点评", "学完即可产出实战作品", "AI 创作工具免费用"].map((t) => (
                         <li key={t} className="flex items-center gap-1.5">
-                          <CheckCircle2 className="h-3.5 w-3.5 shrink-0 text-primary" />
+                          <CheckCircle2 className="h-3.5 w-3.5 shrink-0 text-green-600 dark:text-green-400" />
                           {t}
                         </li>
                       ))}
@@ -703,7 +704,10 @@ function LessonRow({
   totalLessons: number;
   completedCount: number;
 }) {
-  const locked = !lesson.isPreview && !enrolled;
+  const { user } = useAppStore();
+  const isAdmin = user?.role === "ADMIN";
+  const effectiveEnrolled = enrolled || isAdmin; // 管理员视为已报名
+  const locked = !lesson.isPreview && !effectiveEnrolled;
   return (
     <div id={`lesson-${lesson.id}`} className="scroll-mt-6">
       <button
@@ -719,10 +723,10 @@ function LessonRow({
             completed
               ? "bg-emerald-500/15 text-emerald-600 dark:text-emerald-400"
               : lesson.isPreview
-                ? "bg-primary/10 text-primary"
+                ? "bg-green-500/10 text-green-600 dark:text-green-400"
                 : locked
                   ? "bg-muted text-muted-foreground"
-                  : "bg-primary/10 text-primary"
+                  : "bg-green-500/10 text-green-600 dark:text-green-400"
           )}
         >
           {completed ? (
@@ -761,7 +765,7 @@ function LessonRow({
               </>
             )}
             {lesson.videoUrl && (
-              <span className="flex items-center gap-0.5 text-primary">
+              <span className=flex items-center gap-0.5 text-green-600 dark:text-green-400">
                 <Cloud className="h-3 w-3" />
                 网盘
               </span>
@@ -787,10 +791,10 @@ function LessonRow({
             {!locked && (
               <div className="mb-3 flex items-center justify-between rounded-md bg-background/60 px-3 py-1.5 text-[11px]">
                 <span className="flex items-center gap-1.5 text-muted-foreground">
-                  <BookCheck className="h-3.5 w-3.5 text-primary" />
+                  <BookCheck className="h-3.5 w-3.5 text-green-600 dark:text-green-400" />
                   课程进度：{completedCount} / {totalLessons} 节已完成
                 </span>
-                <span className="font-medium text-primary">
+                <span className="font-medium text-green-600 dark:text-green-400">
                   {Math.round((completedCount / totalLessons) * 100)}%
                 </span>
               </div>
@@ -806,7 +810,7 @@ function LessonRow({
                     ul: ({ children }) => <ul className="mb-2 ml-4 list-disc space-y-1">{children}</ul>,
                     ol: ({ children }) => <ol className="mb-2 ml-4 list-decimal space-y-1">{children}</ol>,
                     li: ({ children }) => <li className="leading-6">{children}</li>,
-                    strong: ({ children }) => <strong className="font-semibold text-primary">{children}</strong>,
+                    strong: ({ children }) => <strong className="font-semibold text-green-600 dark:text-green-400">{children}</strong>,
                     em: ({ children }) => <em className="italic">{children}</em>,
                     blockquote: ({ children }) => (
                       <blockquote className="my-2 border-l-2 border-primary/40 bg-primary/5 px-3 py-1.5 italic">
@@ -820,7 +824,7 @@ function LessonRow({
                       <pre className="my-2 overflow-x-auto rounded-md bg-muted p-3 text-[11px]">{children}</pre>
                     ),
                     a: ({ children, href }) => (
-                      <a href={href} target="_blank" rel="noopener noreferrer" className="text-primary underline hover:opacity-80">
+                      <a href={href} target="_blank" rel="noopener noreferrer" className="text-green-600 dark:text-green-400 underline hover:opacity-80">
                         {children}
                       </a>
                     ),
@@ -1015,14 +1019,14 @@ function LessonAssistant({
   };
 
   return (
-    <div className="mt-4 rounded-xl border border-primary/20 bg-gradient-to-br from-primary/[0.04] to-accent/[0.04] p-3">
+    <div className="mt-4 rounded-xl border border-green-500/20 bg-gradient-to-br from-green-500/[0.04] to-blue-500/[0.04] p-3">
       {/* 助教标题栏 */}
       <div className="flex w-full items-center gap-2">
         <button
           onClick={() => setOpen((v) => !v)}
           className="flex flex-1 items-center gap-2 text-left"
         >
-          <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-gradient-to-br from-primary to-accent">
+          <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-gradient-to-br from-green-500 to-blue-500">
             <Bot className="h-4 w-4 text-primary-foreground" />
           </div>
           <div className="flex-1">
@@ -1043,7 +1047,7 @@ function LessonAssistant({
               size="sm"
               variant="ghost"
               onClick={handleExportChat}
-              className="h-7 gap-1 px-2 text-[11px] text-muted-foreground hover:text-primary"
+              className="h-7 gap-1 px-2 text-[11px] text-muted-foreground hover:text-green-600 dark:hover:text-green-400"
               title="导出对话为 Markdown 文件"
             >
               <Download className="h-3 w-3" />
@@ -1122,7 +1126,7 @@ function LessonAssistant({
                       "flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-[10px]",
                       m.role === "user"
                         ? "bg-muted text-muted-foreground"
-                        : "bg-gradient-to-br from-primary to-accent text-primary-foreground"
+                        : "bg-gradient-to-br from-green-500 to-blue-500 text-white"
                     )}
                   >
                     {m.role === "user" ? "我" : <Bot className="h-3.5 w-3.5" />}
@@ -1131,7 +1135,7 @@ function LessonAssistant({
                     className={cn(
                       "max-w-[80%] rounded-xl px-3 py-2 text-xs leading-relaxed",
                       m.role === "user"
-                        ? "bg-primary text-primary-foreground"
+                        ? "bg-green-500 text-white"
                         : "bg-card border border-border/60 text-foreground/85"
                     )}
                   >
@@ -1141,13 +1145,13 @@ function LessonAssistant({
               ))}
               {loading && (
                 <div className="flex gap-2">
-                  <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-primary to-accent">
+                  <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-green-500 to-blue-500">
                     <Bot className="h-3.5 w-3.5 text-primary-foreground" />
                   </div>
                   <div className="flex items-center gap-1 rounded-xl bg-card border border-border/60 px-3 py-2.5">
-                    <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-primary [animation-delay:-0.3s]" />
-                    <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-primary [animation-delay:-0.15s]" />
-                    <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-primary" />
+                    <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-green-500 [animation-delay:-0.3s]" />
+                    <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-green-500 [animation-delay:-0.15s]" />
+                    <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-green-500" />
                   </div>
                 </div>
               )}
@@ -1162,7 +1166,7 @@ function LessonAssistant({
                   key={q}
                   onClick={() => ask(q)}
                   disabled={loading}
-                  className="rounded-full border border-border/60 bg-card/60 px-2.5 py-1 text-[11px] text-muted-foreground transition-colors hover:border-primary/40 hover:text-primary disabled:opacity-50"
+                  className="rounded-full border border-border/60 bg-card/60 px-2.5 py-1 text-[11px] text-muted-foreground transition-colors hover:border-green-500/40 hover:text-green-600 dark:hover:text-green-400 disabled:opacity-50"
                 >
                   {q}
                 </button>
@@ -1190,7 +1194,7 @@ function LessonAssistant({
               size="sm"
               onClick={() => ask(input)}
               disabled={loading || !input.trim()}
-              className="h-9 shrink-0 gap-1 rounded-lg bg-gradient-to-r from-primary to-accent px-2.5 text-primary-foreground"
+              className="h-9 shrink-0 gap-1 rounded-lg bg-gradient-to-r from-green-500 to-blue-500 px-2.5 text-white-foreground"
             >
               {loading ? (
                 <Loader2 className="h-3.5 w-3.5 animate-spin" />
@@ -1287,11 +1291,11 @@ function BaiduPanCard({ url }: { url: string }) {
     <motion.div
       initial={{ opacity: 0, y: 8 }}
       animate={{ opacity: 1, y: 0 }}
-      className="mt-3 overflow-hidden rounded-lg border border-primary/30 bg-gradient-to-br from-primary/5 to-accent/5"
+      className="mt-3 overflow-hidden rounded-lg border border-green-500/30 bg-gradient-to-br from-green-500/5 to-accent/5"
     >
       {/* 顶部条 */}
       <div className="flex items-center gap-2 border-b border-primary/20 bg-primary/5 px-3 py-2">
-        <div className="flex h-7 w-7 items-center justify-center rounded-md bg-gradient-to-br from-primary to-accent text-primary-foreground">
+        <div className="flex h-7 w-7 items-center justify-center rounded-md bg-gradient-to-br from-green-500 to-blue-500 text-white">
           <Cloud className="h-4 w-4" />
         </div>
         <div className="flex-1">
@@ -1326,7 +1330,7 @@ function BaiduPanCard({ url }: { url: string }) {
             href={link}
             target="_blank"
             rel="noopener noreferrer"
-            className="inline-flex h-8 shrink-0 items-center gap-1 rounded-md bg-primary px-2.5 text-[11px] font-medium text-primary-foreground transition-colors hover:bg-primary/90"
+            className="inline-flex h-8 shrink-0 items-center gap-1 rounded-md bg-green-500 px-2.5 text-[11px] font-medium text-primary-foreground transition-colors hover:bg-primary/90"
             title="在新标签页打开"
           >
             <ExternalLink className="h-3 w-3" />
@@ -1358,7 +1362,7 @@ function BaiduPanCard({ url }: { url: string }) {
               size="sm"
               variant="ghost"
               onClick={copyAll}
-              className="ml-auto h-8 gap-1 px-2 text-[11px] text-primary"
+              className="ml-auto h-8 gap-1 px-2 text-[11px] text-green-600 dark:text-green-400"
               title="一键复制链接 + 提取码"
             >
               一键复制全部

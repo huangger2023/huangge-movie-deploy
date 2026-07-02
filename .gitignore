@@ -28,6 +28,11 @@ node_modules
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
+
+# livekit-agent
+livekit-agent/node_modules
+livekit-agent/dist
+livekit-agent/.env
 .pnpm-debug.log*
 
 # env files (can opt-in for committing if needed)

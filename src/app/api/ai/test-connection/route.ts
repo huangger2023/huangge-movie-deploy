@@ -1,14 +1,18 @@
 import { NextRequest, NextResponse } from "next/server";
+import { requireAdmin } from "@/lib/auth";
 
 export const runtime = "nodejs";
 
 /**
- * 测试 AI 模型连接是否可用。
+ * 测试 AI 模型连接是否可用（仅管理员）。
  * POST /api/ai/test-connection
  * body: { baseUrl, model, apiKey }
  */
 export async function POST(req: NextRequest) {
   try {
+    const auth = await requireAdmin();
+    if (auth.error) return auth.error;
+
     const body = await req.json();
     const baseUrl = String(body.baseUrl || "").trim();
     const model = String(body.model || "").trim();

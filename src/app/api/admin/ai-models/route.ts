@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { requireAdmin } from "@/lib/auth";
+import { clearGlobalModelPublicCache } from "@/lib/ai";
 
 export const runtime = "nodejs";
 
@@ -11,15 +12,30 @@ export function maskApiKey(key: string): string {
   return "••••••••" + key.slice(-4);
 }
 
-/** 获取全部 AI 模型配置（仅管理员，apiKey 脱敏） */
+/** 读取全局模型公开开关（从 SystemSetting 表） */
+async function getGlobalModelPublicSetting(): Promise<boolean> {
+  try {
+    const row = await db.systemSetting.findUnique({
+      where: { key: "ai_global_model_public" },
+    });
+    return row?.value !== "false"; // 默认公开
+  } catch {
+    return true;
+  }
+}
+
+/** 获取全部 AI 模型配置（仅管理员，apiKey 脱敏）+ 全局开关状态 */
 export async function GET() {
   try {
     const auth = await requireAdmin();
     if (auth.error) return auth.error;
 
-    const models = await db.aiModel.findMany({
-      orderBy: [{ isDefault: "desc" }, { createdAt: "asc" }],
-    });
+    const [models, globalModelPublic] = await Promise.all([
+      db.aiModel.findMany({
+        orderBy: [{ isDefault: "desc" }, { createdAt: "asc" }],
+      }),
+      getGlobalModelPublicSetting(),
+    ]);
 
     return NextResponse.json({
       models: models.map((m) => ({
@@ -33,6 +49,7 @@ export async function GET() {
         createdAt: m.createdAt,
         updatedAt: m.updatedAt,
       })),
+      globalModelPublic,
     });
   } catch (e) {
     console.error("ai-models list error", e);
@@ -88,5 +105,46 @@ export async function POST(req: NextRequest) {
   } catch (e) {
     console.error("ai-models create error", e);
     return NextResponse.json({ error: "新增模型失败" }, { status: 500 });
+  }
+}
+
+/**
+ * PUT /api/admin/ai-models
+ * 切换全局模型公开开关（仅管理员）。
+ * body: { globalModelPublic: boolean }
+ * - true: 全局使用，所有用户可使用管理员配置的默认模型
+ * - false: 仅管理员可用，普通用户需自行配置模型
+ */
+export async function PUT(req: NextRequest) {
+  try {
+    const auth = await requireAdmin();
+    if (auth.error) return auth.error;
+
+    const body = await req.json();
+    const globalModelPublic = Boolean(body.globalModelPublic);
+
+    await db.systemSetting.upsert({
+      where: { key: "ai_global_model_public" },
+      create: {
+        key: "ai_global_model_public",
+        value: String(globalModelPublic),
+      },
+      update: {
+        value: String(globalModelPublic),
+      },
+    });
+
+    // 清除缓存，让后续 AI 调用立即生效
+    clearGlobalModelPublicCache();
+
+    return NextResponse.json({
+      globalModelPublic,
+      message: globalModelPublic
+        ? "全局模型已公开，所有用户可使用"
+        : "全局模型已关闭，仅管理员可用",
+    });
+  } catch (e) {
+    console.error("ai-models put error", e);
+    return NextResponse.json({ error: "切换全局开关失败" }, { status: 500 });
   }
 }

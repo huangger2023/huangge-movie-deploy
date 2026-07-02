@@ -8,22 +8,55 @@ export const maxDuration = 120;
 
 export async function POST(req: NextRequest) {
   try {
-    const body = (await req.json()) as ScriptGenInput;
+    const body = await req.json();
     if (!body.movieTitle?.trim()) {
       return NextResponse.json({ error: "请填写电影名称" }, { status: 400 });
     }
 
-    const output = await generateNarrationScript({
-      movieTitle: body.movieTitle.trim(),
-      genre: body.genre || "剧情",
-      style: body.style || "悬疑反转",
-      duration: body.duration || "90秒",
-      hookType: body.hookType || "悬念提问",
-      tone: body.tone || "犀利",
-      keywords: body.keywords,
-      extraNotes: body.extraNotes,
-      plotContext: body.plotContext,
-    });
+    // 如果传了 configId，查出该配置的完整信息（baseUrl/apiKey/model列表）
+    let configBaseUrl: string | undefined;
+    let configApiKey: string | undefined;
+    let modelOverride: string | undefined;
+
+    if (body.configId && body.modelName) {
+      const user = await getCurrentUser();
+      // 先在全局模型中查找
+      const globalModel = await (db as any).aiModel.findUnique({ where: { id: body.configId } });
+      if (globalModel) {
+        configBaseUrl = globalModel.baseUrl;
+        configApiKey = globalModel.apiKey;
+        modelOverride = body.modelName;
+      } else if (user) {
+        // 再在用户模型中查找
+        const userModel = await (db as any).userAiModel.findUnique({ where: { id: body.configId } });
+        if (userModel) {
+          configBaseUrl = userModel.baseUrl;
+          configApiKey = userModel.apiKey;
+          modelOverride = body.modelName;
+        }
+      }
+    }
+
+    const output = await generateNarrationScript(
+      {
+        movieTitle: body.movieTitle.trim(),
+        genre: body.genre || "剧情",
+        style: body.style || "悬疑反转",
+        duration: body.duration || "90秒",
+        hookType: body.hookType || "反差冲击",
+        tone: body.tone || "犀利",
+        keywords: body.keywords,
+        extraNotes: body.extraNotes,
+        plotContext: body.plotContext,
+        model: modelOverride,
+        // 剧情增量参数
+        entryPoint: body.entryPoint,
+        uniqueAngle: body.uniqueAngle,
+      },
+      undefined,
+      configBaseUrl,
+      configApiKey,
+    );
 
     const user = await getCurrentUser();
     let savedId: string | null = null;

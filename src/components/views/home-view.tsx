@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import * as React from "react";
 import { motion } from "framer-motion";
@@ -35,28 +35,28 @@ const AI_TOOLS = [
   {
     icon: Sparkles,
     title: "AI 独家文案生成",
-    desc: "输入电影信息与风格参数，10分钟产出结构完整的爆款解说文案，黄金3秒开头+高密度反转+互动金句结尾。",
+    desc: "输入电影信息与风格参数，10分钟产出结构完整的爆款解说文案，黄金3秒开�?高密度反�?互动金句结尾�?,
     color: "from-rose-500 to-pink-500",
     view: "script-generator" as const,
   },
   {
     icon: TypeIcon,
-    title: "爆款标题生成器",
-    desc: "六大爆款标题公式，批量产出悬念型/反差型/数字型标题，告别想标题想到头秃。",
+    title: "爆款标题生成�?,
+    desc: "六大爆款标题公式，批量产出悬念型/反差�?数字型标题，告别想标题想到头秃�?,
     color: "from-amber-500 to-orange-500",
     view: "tools" as const,
   },
   {
     icon: Zap,
-    title: "黄金3秒开头",
-    desc: "前3秒决定生死。5种钩子类型专属生成，一句话把观众死死钉在屏幕上。",
+    title: "黄金3秒开�?,
+    desc: "�?秒决定生死�?种钩子类型专属生成，一句话把观众死死钉在屏幕上�?,
     color: "from-fuchsia-500 to-rose-500",
     view: "tools" as const,
   },
   {
     icon: Wand2,
     title: "文案润色神器",
-    desc: "把平淡文案改造成爆款，增强转折词、画面感、情绪张力，让AI文案有人味。",
+    desc: "把平淡文案改造成爆款，增强转折词、画面感、情绪张力，让AI文案有人味�?,
     color: "from-emerald-500 to-teal-500",
     view: "tools" as const,
   },
@@ -67,16 +67,16 @@ const STEPS = [
     icon: Target,
     step: "01",
     title: "定位赛道",
-    desc: "用「人群×情绪×风格」三角定位法，找到你的差异化解说人设。",
+    desc: "用「人群×情绪×风格」三角定位法，找到你的差异化解说人设�?,
     color: "from-rose-500 to-pink-500",
-    tag: "破冰营 · 第2课",
+    tag: "破冰�?· �?�?,
     view: "courses" as const,
   },
   {
     icon: Brain,
     step: "02",
     title: "AI生成文案",
-    desc: "调用平台AI工具，10分钟产出独家精选解说文案、爆款标题、黄金开头。",
+    desc: "调用平台AI工具�?0分钟产出独家精选解说文案、爆款标题、黄金开头�?,
     color: "from-amber-500 to-orange-500",
     tag: "AI文案工具",
     view: "script-generator" as const,
@@ -85,18 +85,18 @@ const STEPS = [
     icon: Mic,
     step: "03",
     title: "配音剪辑",
-    desc: "手机也能配出电影级声线，3分钟剪出节奏感，声画双修出质感。",
+    desc: "手机也能配出电影级声线，3分钟剪出节奏感，声画双修出质感�?,
     color: "from-fuchsia-500 to-rose-500",
-    tag: "配音剪辑营 · 第5-6课",
+    tag: "配音剪辑�?· �?-6�?,
     view: "courses" as const,
   },
   {
     icon: Rocket,
     step: "04",
     title: "发布变现",
-    desc: "标题封面标签流量密码+多元变现路径，跑通商业闭环。",
+    desc: "标题封面标签流量密码+多元变现路径，跑通商业闭环�?,
     color: "from-emerald-500 to-teal-500",
-    tag: "运营变现课",
+    tag: "运营变现�?,
     view: "courses" as const,
   },
 ];
@@ -106,22 +106,22 @@ const TESTIMONIALS = [
     name: "阿凯解说",
     role: "影视赛道 · 学员案例",
     content:
-      "跟着课程学了两周，配合 AI 文案工具，第一条视频就跑了 50 万播放。现在一天能产出 3 条高质量解说，效率直接翻了 5 倍。",
-    avatar: "凯",
+      "跟着课程学了两周，配�?AI 文案工具，第一条视频就跑了 50 万播放。现在一天能产出 3 条高质量解说，效率直接翻�?5 倍�?,
+    avatar: "�?,
   },
   {
     name: "电影夜话",
     role: "悬疑赛道 · 学员案例",
     content:
-      "最值的是 AI 文案大师课。以前写一条文案要 2 小时，现在 10 分钟出初稿再人工微调，质量还更高。回本太快了。",
-    avatar: "夜",
+      "最值的�?AI 文案大师课。以前写一条文案要 2 小时，现�?10 分钟出初稿再人工微调，质量还更高。回本太快了�?,
+    avatar: "�?,
   },
   {
     name: "小鹿看片",
     role: "情感赛道 · 学员案例",
     content:
-      "黄金开头工具简直是救星。我的爆款开头基本都来自这里，完播率从 35% 涨到了 52%，推荐所有做解说的都来用。",
-    avatar: "鹿",
+      "黄金开头工具简直是救星。我的爆款开头基本都来自这里，完播率�?35% 涨到�?52%，推荐所有做解说的都来用�?,
+    avatar: "�?,
   },
 ];
 
@@ -215,13 +215,13 @@ export function HomeView() {
         icon: BookOpen,
         value: String(stats.courseCount),
         label: "在线课程",
-        suffix: "门",
+        suffix: "�?,
       },
       {
         icon: Users,
         value: stats.totalStudents.toLocaleString(),
         label: "累计学员",
-        suffix: "人",
+        suffix: "�?,
       },
       {
         icon: Star,
@@ -233,7 +233,7 @@ export function HomeView() {
         icon: Sparkles,
         value: stats.generatedScripts.toLocaleString(),
         label: "AI 生成文案",
-        suffix: "份",
+        suffix: "�?,
       },
     ];
   }, [stats]);
@@ -246,9 +246,9 @@ export function HomeView() {
         <div className="absolute inset-0 bg-grid-faint opacity-40" />
         {/* 浮光粒子效果 */}
         <div className="pointer-events-none absolute inset-0 overflow-hidden">
-          <div className="absolute left-1/4 top-1/4 h-64 w-64 rounded-full bg-primary/8 blur-[100px] animate-pulse" />
+          <div className="absolute left-1/4 top-1/4 h-64 w-64 rounded-full bg-green-500/8 blur-[100px] animate-pulse" />
           <div className="absolute right-1/4 bottom-1/3 h-48 w-48 rounded-full bg-accent/8 blur-[80px] animate-pulse [animation-delay:1.5s]" />
-          <div className="absolute left-1/2 top-1/2 h-32 w-32 -translate-x-1/2 -translate-y-1/2 rounded-full bg-primary/5 blur-[60px] animate-pulse [animation-delay:3s]" />
+          <div className="absolute left-1/2 top-1/2 h-32 w-32 -translate-x-1/2 -translate-y-1/2 rounded-full bg-green-500/5 blur-[60px] animate-pulse [animation-delay:3s]" />
         </div>
         {/* Hero bg image */}
         <div className="pointer-events-none absolute inset-0">
@@ -268,7 +268,7 @@ export function HomeView() {
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.5 }}
             >
-              <Badge className="mb-5 gap-1.5 border-primary/30 bg-primary/10 px-3 py-1 text-primary">
+              <Badge className="mb-5 gap-1.5 border-blue-500/30 bg-blue-500/10 px-3 py-1 text-blue-600 dark:text-blue-400">
                 <Sparkles className="h-3.5 w-3.5" />
                 AI 驱动 · 抖音电影解说创作平台
               </Badge>
@@ -280,9 +280,9 @@ export function HomeView() {
               transition={{ duration: 0.5, delay: 0.1 }}
               className="text-balance text-4xl font-extrabold leading-[1.15] tracking-tight sm:text-5xl lg:text-6xl"
             >
-              用 <span className="text-gradient-primary">AI 生成独家精选文案</span>
+              �?<span className="text-gradient-primary">AI 生成独家精选文�?/span>
               <br />
-              做出百万播放的电影解说
+              做出百万播放的电影解�?
             </motion.h1>
 
             <motion.p
@@ -291,8 +291,8 @@ export function HomeView() {
               transition={{ duration: 0.5, delay: 0.2 }}
               className="mx-auto mt-6 max-w-2xl text-pretty text-base leading-relaxed text-muted-foreground sm:text-lg"
             >
-              专注抖音电影解说创作教学。系统课程 + AI
-              智能文案工具链，从选片定位到发布变现，让每一位创作者都能跑通属于自己的爆款路径。
+              专注抖音电影解说创作教学。系统课�?+ AI
+              智能文案工具链，从选片定位到发布变现，让每一位创作者都能跑通属于自己的爆款路径�?
             </motion.p>
 
             <motion.div
@@ -304,7 +304,7 @@ export function HomeView() {
               <Button
                 size="lg"
                 onClick={() => setView("script-generator")}
-                className="group h-12 rounded-full bg-gradient-to-r from-primary to-accent px-7 text-base text-primary-foreground shadow-glow-primary"
+                className="group h-12 rounded-full bg-gradient-to-r from-green-500 to-blue-500 px-7 text-base text-white shadow-glow-primary"
               >
                 <Sparkles className="mr-2 h-5 w-5" />
                 立即体验 AI 文案生成
@@ -327,11 +327,11 @@ export function HomeView() {
               transition={{ duration: 0.5, delay: 0.4 }}
               className="mt-4 text-xs text-muted-foreground"
             >
-              免费体验 AI 工具 · 300+ 学员已产出爆款 · 无需信用卡
+              免费体验 AI 工具 · 300+ 学员已产出爆�?· 无需信用�?
             </motion.p>
           </div>
 
-          {/* Stats — 真实平台数据 */}
+          {/* Stats �?真实平台数据 */}
           <motion.div
             initial={{ opacity: 0, y: 30 }}
             animate={{ opacity: 1, y: 0 }}
@@ -341,9 +341,9 @@ export function HomeView() {
             {(liveStats || []).map((s) => (
               <div
                 key={s.label}
-                className="glass-card rounded-2xl border border-border/60 p-5 text-center transition-all hover:border-primary/30 hover:shadow-glow-primary"
+                className="glass-card rounded-2xl border border-border/60 p-5 text-center transition-all hover:border-green-500/30 hover:shadow-glow-primary"
               >
-                <s.icon className="mx-auto mb-2 h-5 w-5 text-primary" />
+                <s.icon className="mx-auto mb-2 h-5 w-5 text-green-600 dark:text-green-400" />
                 <div className="text-2xl font-bold tracking-tight">
                   <AnimatedNumber value={s.value} />
                   <span className="ml-0.5 text-sm font-normal text-muted-foreground">
@@ -374,7 +374,7 @@ export function HomeView() {
         <SectionHeading
           eyebrow="核心特色"
           icon={Sparkles}
-          title="AI 创作工具箱"
+          title="AI 创作工具�?
           subtitle="自己开发的辅助创作工具链，把单条文案产出时间从 2 小时压到 10 分钟"
         />
         <div className="mt-12 grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
@@ -399,7 +399,7 @@ export function HomeView() {
                 <p className="text-sm leading-relaxed text-muted-foreground">
                   {tool.desc}
                 </p>
-                <div className="mt-4 flex items-center text-sm font-medium text-primary opacity-0 transition-opacity group-hover:opacity-100">
+                <div className="mt-4 flex items-center text-sm font-medium text-green-600 dark:text-green-400 opacity-0 transition-opacity group-hover:opacity-100">
                   立即使用
                   <ArrowRight className="ml-1 h-4 w-4" />
                 </div>
@@ -414,10 +414,10 @@ export function HomeView() {
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
           <div className="flex items-end justify-between gap-4">
             <SectionHeading
-              eyebrow="精选课程"
+              eyebrow="精选课�?
               icon={Film}
               title="从入门到高阶的系统课"
-              subtitle="每节课都源自真实操盘经验，学完就能直接落地"
+              subtitle="每节课都源自真实操盘经验，学完就能直接落�?
               align="left"
             />
             <Button
@@ -444,14 +444,14 @@ export function HomeView() {
         </div>
       </section>
 
-      {/* SHOWCASE — 学员真实创作展示墙 */}
+      {/* SHOWCASE �?学员真实创作展示�?*/}
       {showcase.length > 0 && (
         <section className="relative mx-auto max-w-7xl px-4 py-16 sm:px-6 lg:px-8 lg:py-24">
           <SectionHeading
             eyebrow="学员真实创作"
             icon={Clapperboard}
-            title="看看同学们用 AI 生成的作品"
-            subtitle="以下均为平台真实生成记录，非虚构案例。你也来试试，下一个爆款可能就是你的。"
+            title="看看同学们用 AI 生成的作�?
+            subtitle="以下均为平台真实生成记录，非虚构案例。你也来试试，下一个爆款可能就是你的�?
           />
           <div className="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {showcase.slice(0, 6).map((item, i) => {
@@ -459,7 +459,7 @@ export function HomeView() {
                 ? { label: "解说文案", icon: ScrollText, color: "from-rose-500 to-pink-500", badge: "border-rose-500/30 bg-rose-500/10 text-rose-600 dark:text-rose-400" }
                 : item.type === "TITLE"
                 ? { label: "爆款标题", icon: TypeIcon, color: "from-amber-500 to-orange-500", badge: "border-amber-500/30 bg-amber-500/10 text-amber-600 dark:text-amber-400" }
-                : { label: "黄金开头", icon: Zap, color: "from-fuchsia-500 to-rose-500", badge: "border-fuchsia-500/30 bg-fuchsia-500/10 text-fuchsia-600 dark:text-fuchsia-400" };
+                : { label: "黄金开�?, icon: Zap, color: "from-fuchsia-500 to-rose-500", badge: "border-fuchsia-500/30 bg-fuchsia-500/10 text-fuchsia-600 dark:text-fuchsia-400" };
               return (
                 <motion.div
                   key={item.id}
@@ -480,19 +480,19 @@ export function HomeView() {
                         {item.isFavorite && (
                           <span className="flex items-center gap-1 text-[10px] text-accent">
                             <Star className="h-3 w-3 fill-accent text-accent" />
-                            已收藏
+                            已收�?
                           </span>
                         )}
                       </div>
                       <h3 className="mb-2 line-clamp-1 font-semibold text-foreground">
-                        《{item.movieTitle}》
+                        《{item.movieTitle}�?
                       </h3>
                       <p className="mb-4 line-clamp-3 min-h-[3.6rem] text-sm leading-relaxed text-muted-foreground">
                         {item.excerpt}
                       </p>
                       <div className="flex items-center justify-between border-t border-border/60 pt-3">
                         <div className="flex items-center gap-2">
-                          <div className={cn("flex h-6 w-6 items-center justify-center rounded-full bg-gradient-to-br text-[10px] font-bold text-primary-foreground", typeMeta.color)}>
+                          <div className={cn("flex h-6 w-6 items-center justify-center rounded-full bg-gradient-to-br text-[10px] font-bold text white", typeMeta.color)}>
                             {item.author.slice(0, 1)}
                           </div>
                           <span className="text-xs text-muted-foreground">
@@ -515,8 +515,8 @@ export function HomeView() {
               onClick={() => setView("script-generator")}
               className="rounded-full"
             >
-              <Sparkles className="mr-1.5 h-4 w-4 text-primary" />
-              我也要生成一条
+              <Sparkles className="mr-1.5 h-4 w-4 text-green-600 dark:text-green-400" />
+              我也要生成一�?
               <ArrowRight className="ml-1.5 h-4 w-4" />
             </Button>
           </div>
@@ -528,7 +528,7 @@ export function HomeView() {
         <SectionHeading
           eyebrow="学习路径"
           icon={Target}
-          title="四步跑通爆款闭环"
+          title="四步跑通爆款闭�?
           subtitle="清晰的成长路径，每一步都有对应课程和工具支撑"
         />
         <div className="mt-12 grid gap-6 md:grid-cols-2 lg:grid-cols-4">
@@ -543,13 +543,13 @@ export function HomeView() {
             >
               <Card
                 onClick={() => setView(s.view)}
-                className="group h-full cursor-pointer p-6 transition-all hover:-translate-y-1 hover:border-primary/30 hover:shadow-glow-primary"
+                className="group h-full cursor-pointer p-6 transition-all hover:-translate-y-1 hover:border-green-500/30 hover:shadow-glow-primary"
               >
                 <div className="mb-4 flex items-center justify-between">
                   <div className={cn("flex h-11 w-11 items-center justify-center rounded-xl bg-gradient-to-br text-white shadow-sm", s.color)}>
                     <s.icon className="h-5 w-5" />
                   </div>
-                  <span className="text-3xl font-bold text-muted/30 transition-colors group-hover:text-primary/30">
+                  <span className="text-3xl font-bold text-muted/30 transition-colors group-hover:text-green-500/30">
                     {s.step}
                   </span>
                 </div>
@@ -557,8 +557,8 @@ export function HomeView() {
                 <p className="text-sm leading-relaxed text-muted-foreground">
                   {s.desc}
                 </p>
-                <div className="mt-3 flex items-center gap-1.5 text-[11px] text-primary opacity-70 transition-opacity group-hover:opacity-100">
-                  <span className="rounded-full bg-primary/10 px-2 py-0.5">{s.tag}</span>
+                <div className="mt-3 flex items-center gap-1.5 text-[11px] text-green-600 dark:text-green-400 opacity-70 transition-opacity group-hover:opacity-100">
+                  <span className="rounded-full bg-green-500/10 px-2 py-0.5 text-green-700 dark:text-green-300">{s.tag}</span>
                   <ArrowRight className="h-3 w-3 transition-transform group-hover:translate-x-0.5" />
                 </div>
               </Card>
@@ -577,20 +577,20 @@ export function HomeView() {
             <SectionHeading
               eyebrow="为什么选择我们"
               icon={Award}
-              title="不止教方法，更给你工具"
-              subtitle="市面上教电影解说的很多，但很少有平台同时提供 AI 创作工具链"
+              title="不止教方法，更给你工�?
+              subtitle="市面上教电影解说的很多，但很少有平台同时提供 AI 创作工具�?
               align="left"
             />
             <ul className="mt-8 space-y-4">
               {[
-                "AI 工具自主研发，持续迭代，永久免费给学员使用",
+                "AI 工具自主研发，持续迭代，永久免费给学员使�?,
                 "课程内容源自真实千万播放操盘经验，非纸上谈兵",
                 "6大创作工具覆盖文案、标题、开头、润色、配音全链路",
-                "社群答疑 + 1对1点评，确保每个学员都能出爆款",
-                "多元变现路径指导，把内容能力转化为真金白银",
+                "社群答疑 + 1�?点评，确保每个学员都能出爆款",
+                "多元变现路径指导，把内容能力转化为真金白�?,
               ].map((item) => (
                 <li key={item} className="flex items-start gap-3">
-                  <CheckCircle2 className="mt-0.5 h-5 w-5 shrink-0 text-primary" />
+                  <CheckCircle2 className="mt-0.5 h-5 w-5 shrink-0 text-green-600 dark:text-green-400" />
                   <span className="text-sm leading-relaxed">{item}</span>
                 </li>
               ))}
@@ -598,9 +598,9 @@ export function HomeView() {
             <Button
               size="lg"
               onClick={() => setView("courses")}
-              className="mt-8 h-12 rounded-full bg-gradient-to-r from-primary to-accent px-7 text-primary-foreground"
+              className="mt-8 h-12 rounded-full bg-gradient-to-r from-green-500 to-blue-500 px-7 text-white"
             >
-              开始系统学习
+              开始系统学�?
               <ArrowRight className="ml-2 h-4 w-4" />
             </Button>
           </div>
@@ -609,12 +609,12 @@ export function HomeView() {
           <div className="space-y-4">
             {TESTIMONIALS.map((t) => (
               <Card key={t.name} className="p-5">
-                <Quote className="mb-3 h-6 w-6 text-primary/30" />
+                <Quote className="mb-3 h-6 w-6 text-green-500/30" />
                 <p className="text-sm leading-relaxed text-foreground/90">
                   {t.content}
                 </p>
                 <div className="mt-4 flex items-center gap-3">
-                  <div className="flex h-10 w-10 items-center justify-center rounded-full bg-gradient-to-br from-primary to-accent text-sm font-bold text-primary-foreground">
+                  <div className="flex h-10 w-10 items-center justify-center rounded-full bg-gradient-to-br from-green-500 to-blue-500 text-sm font-bold text white">
                     {t.avatar}
                   </div>
                   <div>
@@ -642,18 +642,18 @@ export function HomeView() {
         <div className="relative mx-auto max-w-4xl px-4 text-center sm:px-6 lg:px-8">
           <h2 className="text-balance text-3xl font-extrabold tracking-tight sm:text-4xl">
             现在就开始你的{" "}
-            <span className="text-gradient-primary">第一个百万播放</span>
+            <span className="text-gradient-primary">第一个百万播�?/span>
           </h2>
           <p className="mx-auto mt-4 max-w-2xl text-muted-foreground">
-            免费体验 AI 文案生成工具，感受 10 分钟产出爆款解说文案的效率革命。
+            免费体验 AI 文案生成工具，感�?10 分钟产出爆款解说文案的效率革命�?
           </p>
           <div className="mt-8 flex flex-col items-center justify-center gap-3 sm:flex-row">
             <Button
               size="lg"
               onClick={() => setView("auth")}
-              className="h-12 rounded-full bg-gradient-to-r from-primary to-accent px-8 text-base text-primary-foreground shadow-glow-primary"
+              className="h-12 rounded-full bg-gradient-to-r from-green-500 to-blue-500 px-8 text-base text white shadow-glow-primary"
             >
-              免费注册开始
+              免费注册开�?
               <ArrowRight className="ml-2 h-4 w-4" />
             </Button>
             <Button
@@ -703,8 +703,8 @@ function SectionHeading({
             : "mb-3 flex items-center gap-2"
         }
       >
-        <Icon className="h-4 w-4 text-primary" />
-        <span className="text-sm font-medium text-primary">{eyebrow}</span>
+        <Icon className="h-4 w-4 text-green-600 dark:text-green-400" />
+        <span className="text-sm font-medium text-green-600 dark:text-green-400">{eyebrow}</span>
       </div>
       <h2 className="text-balance text-2xl font-bold tracking-tight sm:text-3xl lg:text-4xl">
         {title}
@@ -713,3 +713,10 @@ function SectionHeading({
     </div>
   );
 }
+
+
+
+
+
+
+

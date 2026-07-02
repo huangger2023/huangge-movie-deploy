@@ -27,10 +27,6 @@ export async function POST(req: NextRequest) {
     const enrollment = await db.enrollment.create({
       data: { userId: user.id, courseId },
     });
-    await db.course.update({
-      where: { id: courseId },
-      data: { studentsCount: { increment: 1 } },
-    });
     return NextResponse.json({ enrollment });
   } catch (e) {
     console.error("enroll error", e);

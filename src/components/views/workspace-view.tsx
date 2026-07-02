@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import * as React from "react";
 import { motion, AnimatePresence } from "framer-motion";
@@ -191,7 +191,7 @@ export function WorkspaceView() {
           <motion.div
             initial={{ opacity: 0, scale: 0.9 }}
             animate={{ opacity: 1, scale: 1 }}
-            className="mb-6 flex h-20 w-20 items-center justify-center rounded-full bg-gradient-to-br from-primary to-accent shadow-glow-primary"
+            className="mb-6 flex h-20 w-20 items-center justify-center rounded-full bg-gradient-to-br from-green-500 to-blue-500 shadow-glow-primary"
           >
             <FolderKanban className="h-10 w-10 text-primary-foreground" />
           </motion.div>
@@ -201,7 +201,7 @@ export function WorkspaceView() {
           </p>
           <Button
             onClick={() => setView("auth")}
-            className="bg-gradient-to-r from-primary to-accent text-primary-foreground"
+            className="bg-gradient-to-r from-green-500 to-blue-500 text-white"
           >
             去登录
           </Button>
@@ -243,8 +243,8 @@ export function WorkspaceView() {
         >
           <div>
             <div className="mb-2 flex items-center gap-2">
-              <FolderKanban className="h-5 w-5 text-primary" />
-              <span className="text-sm font-medium text-primary">创作工作台</span>
+              <FolderKanban className=h-5 w-5 text-green-600 dark:text-green-400" />
+              <span className=text-sm font-medium text-green-600 dark:text-green-400">创作工作台</span>
             </div>
             <h1 className="text-3xl font-bold tracking-tight">我的创作项目</h1>
             <p className="mt-2 text-sm text-muted-foreground">
@@ -253,7 +253,7 @@ export function WorkspaceView() {
           </div>
           <Button
             onClick={() => setCreateOpen(true)}
-            className="bg-gradient-to-r from-primary to-accent text-primary-foreground"
+            className="bg-gradient-to-r from-green-500 to-blue-500 text-white"
           >
             <Plus className="mr-1.5 h-4 w-4" />
             新建项目
@@ -269,7 +269,7 @@ export function WorkspaceView() {
             className="mb-5 grid grid-cols-2 gap-3 sm:grid-cols-4"
           >
             <Card className="flex items-center gap-3 p-3.5">
-              <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary/10 text-primary">
+              <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-green-500/10 text-green-600 dark:text-green-400">
                 <FolderKanban className="h-4 w-4" />
               </div>
               <div>
@@ -341,7 +341,7 @@ export function WorkspaceView() {
                   className={cn(
                     "flex shrink-0 items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs transition-all",
                     statusFilter === opt.id
-                      ? "border-primary bg-primary text-primary-foreground shadow-sm"
+                      ? "border-green-500 bg-green-500 text-white shadow-sm"
                       : "border-border/60 bg-card/60 text-muted-foreground hover:border-primary/40 hover:text-foreground"
                   )}
                 >
@@ -389,7 +389,7 @@ export function WorkspaceView() {
             </p>
             <Button
               onClick={() => setCreateOpen(true)}
-              className="bg-gradient-to-r from-primary to-accent text-primary-foreground"
+              className="bg-gradient-to-r from-green-500 to-blue-500 text-white"
             >
               <Plus className="mr-1.5 h-4 w-4" />
               创建第一个项目
@@ -466,7 +466,7 @@ export function WorkspaceView() {
                           className={cn(
                             "flex flex-col items-center gap-0.5 rounded-lg border py-1.5 text-[10px]",
                             m.filled
-                              ? "border-primary/30 bg-primary/5 text-primary"
+                              ? "border-green-500/30 bg-green-500/5 text-green-600 dark:text-green-400"
                               : "border-border/60 text-muted-foreground/60"
                           )}
                         >
@@ -487,7 +487,7 @@ export function WorkspaceView() {
                             e.stopPropagation();
                             setDuplicateId(ws.id);
                           }}
-                          className="rounded-md p-1 text-muted-foreground transition-colors hover:bg-primary/10 hover:text-primary"
+                          className="rounded-md p-1 text-muted-foreground transition-colors hover:bg-green-500/10 hover:text-green-600 dark:hover:text-green-400"
                           title="复制为新项目"
                         >
                           <CopyPlus className="h-3.5 w-3.5" />
@@ -560,7 +560,7 @@ export function WorkspaceView() {
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
-              <CopyPlus className="h-4 w-4 text-primary" />
+              <CopyPlus className="h-4 w-4 text-green-600 dark:text-green-400" />
               复制为新项目
             </DialogTitle>
             <DialogDescription>
@@ -697,7 +697,7 @@ function DuplicateForm({
         </div>
       </div>
       <div className="flex items-center gap-1.5 rounded-lg bg-primary/5 px-3 py-2 text-xs text-muted-foreground">
-        <CopyPlus className="h-3.5 w-3.5 shrink-0 text-primary" />
+        <CopyPlus className="h-3.5 w-3.5 shrink-0 text-green-600 dark:text-green-400" />
         <span>
           源项目「{sourceTitle}」→ 新项目「{newTitle || "未命名"}」，状态重置为草稿
         </span>
@@ -709,7 +709,7 @@ function DuplicateForm({
         <Button
           onClick={handleDuplicate}
           disabled={saving || !newTitle.trim()}
-          className="gap-1.5 bg-gradient-to-r from-primary to-accent text-primary-foreground"
+          className="gap-1.5 bg-gradient-to-r from-green-500 to-blue-500 text-white"
         >
           {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <CopyPlus className="h-4 w-4" />}
           {saving ? "复制中…" : "创建副本"}
@@ -764,7 +764,7 @@ function CreateWorkspaceDialog({
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
-            <Plus className="h-4 w-4 text-primary" />
+            <Plus className="h-4 w-4 text-green-600 dark:text-green-400" />
             新建创作项目
           </DialogTitle>
           <DialogDescription>为一部影视作品创建项目，集中管理创作素材</DialogDescription>
@@ -815,7 +815,7 @@ function CreateWorkspaceDialog({
           <Button variant="ghost" onClick={() => onOpenChange(false)} disabled={saving}>
             取消
           </Button>
-          <Button onClick={submit} disabled={saving} className="bg-gradient-to-r from-primary to-accent text-primary-foreground">
+          <Button onClick={submit} disabled={saving} className="bg-gradient-to-r from-green-500 to-blue-500 text-white">
             {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}
             创建
           </Button>
@@ -985,10 +985,10 @@ function WorkspaceEditor({
 
         {/* 进度条 */}
         <div className="mb-5 flex items-center gap-3 rounded-xl border border-border/60 bg-card/40 p-3">
-          <TrendingUp className="h-4 w-4 text-primary" />
+          <TrendingUp className="h-4 w-4 text-green-600 dark:text-green-400" />
           <span className="text-xs text-muted-foreground">创作完成度</span>
           <Progress value={workspace.progress} className="h-2 flex-1" />
-          <span className="text-sm font-bold text-primary">{workspace.progress}%</span>
+          <span className="text-sm font-bold text-orange-600 dark:text-orange-400">{workspace.progress}%</span>
         </div>
 
         {/* Tab 栏 */}
@@ -1002,7 +1002,7 @@ function WorkspaceEditor({
                 className={cn(
                   "flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-xs font-medium transition-all",
                   activeTab === t.key
-                    ? "border-primary bg-primary/10 text-primary shadow-sm"
+                    ? "border-green-500 bg-green-500/10 text-green-600 dark:text-green-400 shadow-sm"
                     : "border-border/60 text-muted-foreground hover:border-primary/40 hover:text-foreground"
                 )}
               >
@@ -1030,7 +1030,7 @@ function WorkspaceEditor({
             <Card className="overflow-hidden">
               <div className="flex items-center justify-between border-b border-border/60 bg-card/40 px-4 py-2.5">
                 <div className="flex items-center gap-2 text-xs font-medium text-muted-foreground">
-                  <activeTab_.icon className="h-3.5 w-3.5 text-primary" />
+                  <activeTab_.icon className="h-3.5 w-3.5 text-green-600 dark:text-green-400" />
                   {activeTab_.label}
                 </div>
                 <div className="flex items-center gap-1.5">
@@ -1047,7 +1047,7 @@ function WorkspaceEditor({
                       className="h-7 gap-1 px-2 text-xs"
                       onClick={() => setView(activeTab === "script" ? "script-generator" : "tools")}
                     >
-                      <Sparkles className="h-3 w-3 text-primary" />
+                      <Sparkles className="h-3 w-3 text-green-600 dark:text-green-400" />
                       用AI生成
                     </Button>
                   )}

@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import * as React from "react";
 import { motion } from "framer-motion";
@@ -192,9 +192,9 @@ function AgentToggle({
   genre?: string;
 }) {
   return (
-    <div className="rounded-xl border border-primary/20 bg-gradient-to-br from-primary/[0.04] to-accent/[0.04] p-3">
+    <div className="rounded-xl border border-blue-500/20 bg-gradient-to-br from-blue-500/[0.04] to-purple-500/[0.04] p-3">
       <div className="flex items-center gap-2">
-        <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-gradient-to-br from-primary to-accent">
+        <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-gradient-to-br from-blue-500 to-purple-500">
           <Bot className="h-4 w-4 text-primary-foreground" />
         </div>
         <div className="flex-1">
@@ -257,12 +257,12 @@ function AgentToggle({
           {agent.searching && (
             <div className="mt-2 flex items-center gap-1.5 text-[10px] text-muted-foreground">
               <div className="flex items-center gap-1">
-                <span className={cn("h-1.5 w-1.5 rounded-full", agent.stage === "search" ? "bg-primary animate-pulse" : "bg-emerald-500")} />
+                <span className={cn("h-1.5 w-1.5 rounded-full", agent.stage === "search" ? "bg-blue-500 animate-pulse" : "bg-emerald-500")} />
                 联网搜索
               </div>
               <span className="text-muted-foreground/40">→</span>
               <div className="flex items-center gap-1">
-                <span className={cn("h-1.5 w-1.5 rounded-full", agent.stage === "read" ? "bg-primary animate-pulse" : agent.stage === "done" ? "bg-emerald-500" : "bg-muted")} />
+                <span className={cn("h-1.5 w-1.5 rounded-full", agent.stage === "read" ? "bg-blue-500 animate-pulse" : agent.stage === "done" ? "bg-emerald-500" : "bg-muted")} />
                 深度读取
               </div>
               <span className="text-muted-foreground/40">→</span>
@@ -388,7 +388,7 @@ export function ToolsView() {
         >
           <Badge
             variant="outline"
-            className="mb-4 gap-1.5 border-primary/30 bg-primary/10 px-3 py-1 text-primary"
+            className="mb-4 gap-1.5 border-blue-500/30 bg-blue-500/10 px-3 py-1 text-blue-600 dark:text-blue-400"
           >
             <Wand className="h-3.5 w-3.5" />
             自研辅助创作工具链
@@ -444,7 +444,7 @@ export function ToolsView() {
                     className={cn(
                       "mt-3 flex items-center text-xs font-medium transition-opacity",
                       isActive
-                        ? "text-primary opacity-100"
+                        ? text-blue-600 dark:text-blue-400 opacity-100"
                         : "text-muted-foreground opacity-0 group-hover:opacity-100"
                     )}
                   >
@@ -782,7 +782,7 @@ function TitleTool() {
           <Card className="flex h-[520px] min-h-0 flex-col overflow-hidden sm:h-[640px]">
             <div className="flex shrink-0 items-center justify-between border-b border-border/60 px-5 py-3">
               <div className="flex items-center gap-2 text-sm font-medium">
-                <ListOrdered className="h-4 w-4 text-primary" />
+                <ListOrdered className=h-4 w-4 text-green-600 dark:text-green-400" />
                 生成结果
                 <Badge variant="secondary" className="text-xs">
                   {items.length} 条
@@ -806,7 +806,7 @@ function TitleTool() {
                     key={i}
                     className="group flex items-start gap-3 rounded-lg border border-border/50 bg-muted/30 px-3 py-2.5 transition-colors hover:border-primary/40 hover:bg-primary/5"
                   >
-                    <span className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-md bg-primary/15 text-[11px] font-semibold text-primary">
+                    <span className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-md bg-green-500/15 text-[11px] font-semibold text-green-600 dark:text-green-400">
                       {i + 1}
                     </span>
                     <p className="flex-1 whitespace-pre-wrap break-words text-sm leading-relaxed">
@@ -1171,7 +1171,7 @@ function PolishTool() {
               </Card>
               <Card className="flex min-h-0 flex-col overflow-hidden border-primary/30 p-4">
                 <div className="mb-3 flex shrink-0 items-center justify-between">
-                  <span className="flex items-center gap-1.5 text-sm font-medium text-primary">
+                  <span className=flex items-center gap-1.5 text-sm font-medium text-green-600 dark:text-green-400">
                     <Sparkles className="h-4 w-4" />
                     润色后
                   </span>
@@ -1342,13 +1342,13 @@ function TtsTool() {
                     return (
                       <button key={v.id} type="button" onClick={() => setVoice(v.id)}
                         className={cn("flex items-center gap-2 rounded-lg border p-2.5 text-left transition-all",
-                          a ? "border-primary bg-primary/10 ring-1 ring-primary" : "border-border bg-muted/30 hover:border-primary/40 hover:bg-muted/50")}>
+                          a ? "border-green-500 bg-green-500/10 ring-1 ring-green-500" : "border-border bg-muted/30 hover:border-primary/40 hover:bg-muted/50")}>
                         <span className="text-xl">{v.emoji}</span>
                         <span className="min-w-0 flex-1">
                           <span className="block truncate text-xs font-medium">{v.name}</span>
                           <span className="block truncate text-[11px] text-muted-foreground">{v.desc}</span>
                         </span>
-                        {a && <Check className="h-3.5 w-3.5 shrink-0 text-primary" />}
+                        {a && <Check className=h-3.5 w-3.5 shrink-0 text-green-600 dark:text-green-400" />}
                       </button>
                     );
                   })}
@@ -1368,7 +1368,7 @@ function TtsTool() {
                   return (
                     <button key={p.id} type="button" onClick={() => setDesignPrompt(a ? "" : p.prompt)}
                       className={cn("inline-flex items-center gap-1 rounded-full border px-2.5 py-1 text-[11px] font-medium transition-all",
-                        a ? "border-primary bg-primary/10 text-primary" : "border-border/70 bg-muted/30 text-muted-foreground hover:border-primary/40 hover:text-foreground")}>
+                        a ? "border-green-500 bg-green-500/10 text-green-600 dark:text-green-400" : "border-border/70 bg-muted/30 text-muted-foreground hover:border-green-500/40/40 hover:text-foreground")}>
                       <span className="leading-none">{p.emoji}</span>{p.label}
                     </button>
                   );
@@ -1417,7 +1417,7 @@ function TtsTool() {
         loading ? (
           <Card className="flex h-[520px] min-h-0 flex-col items-center justify-center gap-4 overflow-hidden p-8 sm:h-[640px]">
             <div className="flex h-16 w-16 items-center justify-center rounded-full bg-primary/10">
-              <Loader2 className="h-7 w-7 animate-spin text-primary" />
+              <Loader2 className="h-7 w-7 animate-spin text-green-600 dark:text-green-400" />
             </div>
             <div className="text-center">
               <p className="font-medium">正在合成语音…</p>
@@ -1425,7 +1425,7 @@ function TtsTool() {
             </div>
             <div className="flex gap-1">
               {[0, 1, 2].map((i) => (
-                <span key={i} className="h-2 w-2 animate-bounce rounded-full bg-primary" style={{ animationDelay: `${i * 0.15}s` }} />
+                <span key={i} className="h-2 w-2 animate-bounce rounded-full bg-blue-500" style={{ animationDelay: `${i * 0.15}s` }} />
               ))}
             </div>
           </Card>
@@ -1433,7 +1433,7 @@ function TtsTool() {
           <Card className="flex h-[520px] min-h-0 flex-col overflow-hidden sm:h-[640px]">
             <div className="flex shrink-0 items-center justify-between border-b border-border/60 px-5 py-3">
               <div className="flex items-center gap-2 text-sm font-medium">
-                <Volume2 className="h-4 w-4 text-primary" />试听结果
+                <Volume2 className="h-4 w-4 text-green-600 dark:text-green-400" />试听结果
               </div>
               <a href={audioUrl} download="yingshu-tts.wav">
                 <Button variant="ghost" size="sm" className="h-7 gap-1.5 px-2 text-xs">

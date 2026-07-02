@@ -101,7 +101,7 @@ export function CourseCard({ course }: { course: CourseItem }) {
           </span>
           <span className="flex items-center gap-1 text-xs">
             <Users className="h-3.5 w-3.5" />
-            {course.studentsCount.toLocaleString()}人学过
+            {(course._count?.enrollments ?? 0).toLocaleString()}人学过
           </span>
         </div>
       </div>

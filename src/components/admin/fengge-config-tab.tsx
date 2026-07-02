@@ -153,7 +153,7 @@ export function FenggeConfigTab() {
   }
 
   return (
-    <Card className="rounded-[2px]">
+    <Card className="rounded-lg">
       <CardHeader>
         <CardTitle className="flex items-center gap-2 text-base">
           <Mic className="h-4 w-4 text-primary" />
@@ -166,7 +166,7 @@ export function FenggeConfigTab() {
       </CardHeader>
       <CardContent className="space-y-6">
         {/* 音色状态 */}
-        <div className="flex items-center gap-3 rounded-[2px] border border-border/60 bg-card/40 px-4 py-3">
+        <div className="flex items-center gap-3 rounded-lg border border-border/60 bg-card/40 px-4 py-3">
           <AudioLines className="h-4 w-4 text-muted-foreground" />
           <div className="flex-1">
             <div className="text-sm font-medium">荒哥音色</div>
@@ -175,12 +175,12 @@ export function FenggeConfigTab() {
             </div>
           </div>
           {config?.hasVoice ? (
-            <Badge className="rounded-[2px] bg-emerald-500/15 text-emerald-600 dark:text-emerald-400">
+            <Badge className="rounded-lg bg-emerald-500/15 text-emerald-600 dark:text-emerald-400">
               <CheckCircle2 className="mr-1 h-3 w-3" />
               已配置音色（克隆模式）
             </Badge>
           ) : (
-            <Badge variant="outline" className="rounded-[2px]">
+            <Badge variant="outline" className="rounded-lg">
               未配置 · 预置音色
             </Badge>
           )}
@@ -195,12 +195,12 @@ export function FenggeConfigTab() {
               type="file"
               accept={AUDIO_ACCEPT}
               onChange={(e) => setFile(e.target.files?.[0] ?? null)}
-              className="rounded-[2px]"
+              className="rounded-lg"
             />
             <Button
               onClick={handleUploadVoice}
               disabled={!file || savingVoice}
-              className="shrink-0 rounded-[2px]"
+              className="shrink-0 rounded-lg"
             >
               {savingVoice ? (
                 <Loader2 className="mr-1 h-4 w-4 animate-spin" />
@@ -221,7 +221,7 @@ export function FenggeConfigTab() {
               size="sm"
               onClick={handleRemoveVoice}
               disabled={removing}
-              className="mt-1 h-8 rounded-[2px] text-destructive hover:text-destructive"
+              className="mt-1 h-8 rounded-lg text-destructive hover:text-destructive"
             >
               {removing ? (
                 <Loader2 className="mr-1 h-3 w-3 animate-spin" />
@@ -243,13 +243,13 @@ export function FenggeConfigTab() {
               min={0}
               value={quotaInput}
               onChange={(e) => setQuotaInput(e.target.value)}
-              className="max-w-[160px] rounded-[2px]"
+              className="max-w-[160px] rounded-lg"
             />
             <Button
               onClick={handleSaveQuota}
               disabled={savingQuota}
               variant="outline"
-              className="rounded-[2px]"
+              className="rounded-lg"
             >
               {savingQuota ? (
                 <Loader2 className="mr-1 h-4 w-4 animate-spin" />

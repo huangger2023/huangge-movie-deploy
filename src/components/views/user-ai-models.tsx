@@ -250,7 +250,7 @@ export function UserAiModels() {
           <div className="flex items-center justify-between gap-3">
             <div>
               <CardTitle className="flex items-center gap-2 text-base">
-                <Cpu className="h-4 w-4 text-primary" />
+                <Cpu className="h-4 w-4 text-green-600 dark:text-green-400" />
                 我的 AI 模型
               </CardTitle>
               <CardDescription className="text-xs mt-1">

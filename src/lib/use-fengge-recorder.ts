@@ -80,8 +80,8 @@ export function useFenggeRecorder(): FenggeRecorderState {
           break;
         }
       }
-      const recorder = mimeType
-        ? new MediaRecorder(stream, { mimeType })
+      const recorder = mimeType && MediaRecorder.isTypeSupported(mimeType)
+        ? new MediaRecorder(stream, { mimeType, audioBitsPerSecond: 48000 })
         : new MediaRecorder(stream);
       mediaRecorderRef.current = recorder;
 

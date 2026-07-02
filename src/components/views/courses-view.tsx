@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import * as React from "react";
 import { motion } from "framer-motion";
@@ -65,17 +65,17 @@ export function CoursesView() {
 
   return (
     <div className="relative min-h-screen">
-      <div className="absolute inset-0 code-bg opacity-50" aria-hidden="true" />
+      <div className="absolute inset-0 code-bg opacity-30" aria-hidden="true" />
 
       <div className="container-page relative pt-12 pb-20 lg:pt-16">
-        {/* —— 页头 —— */}
+        {/* Page header */}
         <motion.div
           initial={{ opacity: 0, y: 12 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.45 }}
         >
-          <div className="font-mono text-[11px] uppercase tracking-[0.1em] text-muted-foreground">
-            / courses · 三阶段课程目录
+          <div className="text-sm font-medium text-muted-foreground">
+            课程中心 · 三阶段课程目录
           </div>
           <h1 className="font-display mt-3 text-balance text-[40px] font-extrabold leading-[1.05] tracking-[-0.025em] sm:text-[60px]">
             <span className="relative inline-block">
@@ -88,22 +88,23 @@ export function CoursesView() {
             课程按小白、爆款、精选三阶段展开，每节课对应生成器里的同一套方法。
           </p>
         </motion.div>
-        {/* —— 筛选面板：控制台风 —— */}
+
+        {/* Filter panel */}
         <motion.div
           initial={{ opacity: 0, y: 12 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.45, delay: 0.12 }}
-          className="mt-10 rounded-[2px] border border-border bg-card/40 backdrop-blur-sm"
+          className="mt-10 rounded-2xl border border-border/50 bg-card/40 backdrop-blur-sm"
         >
-          <div className="flex items-center justify-between border-b border-border/70 px-4 py-2 font-mono text-[10px] uppercase tracking-[0.1em] text-muted-foreground">
-            <span>filter · 筛选条件</span>
-            <span>
-              {loading ? "loading…" : `${courses.length} matched`}
+          <div className="flex items-center justify-between border-b border-border/40 px-5 py-3 text-sm text-muted-foreground">
+            <span className="font-medium">筛选条件</span>
+            <span className="text-xs">
+              {loading ? "加载中…" : `${courses.length} 门课程`}
               {hasActiveFilters && (
                 <button
                   type="button"
                   onClick={clearFilters}
-                  className="ml-3 inline-flex items-center gap-1 normal-case text-foreground/80 hover:text-primary"
+                  className="ml-3 inline-flex items-center gap-1 text-foreground/80 hover:text-green-600 dark:hover:text-green-400"
                 >
                   <X className="h-3 w-3" /> 清空
                 </button>
@@ -112,7 +113,7 @@ export function CoursesView() {
           </div>
 
           <div className="space-y-5 px-5 py-5 sm:px-6 sm:py-6">
-            <FilterRow label="STAGE">
+            <FilterRow label="阶段">
               {CATEGORIES.map((item) => (
                 <Chip
                   key={item}
@@ -124,7 +125,7 @@ export function CoursesView() {
               ))}
             </FilterRow>
 
-            <FilterRow label="LEVEL">
+            <FilterRow label="难度">
               {LEVELS.map((item) => (
                 <Chip
                   key={item}
@@ -136,20 +137,20 @@ export function CoursesView() {
               ))}
             </FilterRow>
 
-            <FilterRow label="QUERY">
+            <FilterRow label="搜索">
               <div className="relative w-full sm:max-w-md">
                 <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
                 <Input
                   value={searchInput}
                   onChange={(e) => setSearchInput(e.target.value)}
                   placeholder="搜索课程标题、重点、讲师…"
-                  className="rounded-[2px] border-border/70 pl-9 font-mono text-[12px]"
+                  className="rounded-lg border-border/50 pl-9 text-sm"
                 />
                 {searchInput ? (
                   <button
                     type="button"
                     onClick={() => setSearchInput("")}
-                    className="absolute right-2 top-1/2 -translate-y-1/2 rounded-sm p-1 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+                    className="absolute right-2 top-1/2 -translate-y-1/2 rounded-md p-1 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
                     aria-label="清空搜索"
                   >
                     <X className="h-3.5 w-3.5" />
@@ -159,21 +160,22 @@ export function CoursesView() {
             </FilterRow>
           </div>
         </motion.div>
-        {/* —— 课程网格 —— */}
+
+        {/* Course grid */}
         <div className="mt-10 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
           {loading ? (
             Array.from({ length: 6 }).map((_, i) => (
               <div key={i} className="space-y-3">
-                <Skeleton className="aspect-[3/2] w-full rounded-[2px]" />
+                <Skeleton className="aspect-[3/2] w-full rounded-xl" />
                 <Skeleton className="h-5 w-3/4" />
                 <Skeleton className="h-4 w-full" />
                 <Skeleton className="h-4 w-2/3" />
               </div>
             ))
           ) : courses.length === 0 ? (
-            <div className="col-span-full rounded-[2px] border border-dashed border-border bg-card/40 px-6 py-20 text-center">
-              <div className="font-mono text-[11px] uppercase tracking-[0.1em] text-muted-foreground">
-                no result · 没找到匹配课程
+            <div className="col-span-full rounded-2xl border border-dashed border-border/50 bg-card/30 px-6 py-20 text-center">
+              <div className="text-sm text-muted-foreground">
+                没找到匹配课程
               </div>
               <p className="font-display mt-3 text-[24px] font-bold tracking-tight">
                 试试换个阶段、难度或关键词
@@ -183,7 +185,7 @@ export function CoursesView() {
                   variant="outline"
                   size="sm"
                   onClick={clearFilters}
-                  className="mt-6 gap-1.5 rounded-[2px]"
+                  className="mt-6 gap-1.5 rounded-lg"
                 >
                   <X className="h-3.5 w-3.5" />
                   清空全部筛选
@@ -217,7 +219,7 @@ function FilterRow({
 }) {
   return (
     <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:gap-5">
-      <div className="font-mono text-[10px] uppercase tracking-[0.12em] text-muted-foreground sm:w-16 sm:shrink-0">
+      <div className="text-xs font-medium text-muted-foreground sm:w-14 sm:shrink-0">
         {label}
       </div>
       <div className="flex flex-1 flex-wrap items-center gap-2">{children}</div>
@@ -239,10 +241,10 @@ function Chip({
       type="button"
       onClick={onClick}
       className={cn(
-        "rounded-[2px] border px-3 py-1 text-[12px] font-medium transition-all",
+        "rounded-lg border px-3.5 py-1.5 text-[13px] font-medium transition-all",
         active
-          ? "border-foreground bg-foreground/10 text-foreground"
-          : "border-border/70 bg-transparent text-muted-foreground hover:border-foreground/40 hover:text-foreground"
+          ? "border-green-500/30 bg-green-500/10 text-green-600 dark:text-green-400"
+          : "border-border/50 bg-transparent text-muted-foreground hover:border-foreground/30 hover:text-foreground"
       )}
     >
       {children}

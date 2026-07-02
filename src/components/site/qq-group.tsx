@@ -47,8 +47,9 @@ export function QQGroupFab() {
 
   // 首屏挂载：决定自动弹还是直接收成小浮窗
   React.useEffect(() => {
-    if (qqGroupJoined || sessionDismissed) {
-      // 已加群或本次会话关过 → 直接小浮窗，不弹
+    const popupDismissed = localStorage.getItem("qq_popup_dismissed") === "true";
+    if (qqGroupJoined || sessionDismissed || popupDismissed) {
+      // 已加群或本次会话关过或用户选择不再弹窗 → 直接小浮窗，不弹
       setCollapsed(true);
       return;
     }
@@ -92,17 +93,23 @@ export function QQGroupFab() {
   }, [popupOpen]);
 
   /** 关闭弹窗 → 缩小成小浮窗（不标记 joined，本次会话不再自动弹） */
-  const handleDismiss = React.useCallback(() => {
+  const handleDismiss = React.useCallback((dontShowAgain: boolean = false) => {
     setPopupOpen(false);
     setSessionDismissed(true);
+    if (dontShowAgain) {
+      localStorage.setItem("qq_popup_dismissed", "true");
+    }
     // 延迟显示小浮窗，等弹窗缩小动画跑一会儿再长出来，视觉衔接更自然
     window.setTimeout(() => setCollapsed(true), 150);
   }, []);
 
   /** 点击一键加群 → 打开 QQ 加群页 + 标记 joined + 缩小成小浮窗 */
-  const handleJoin = React.useCallback(() => {
+  const handleJoin = React.useCallback((dontShowAgain: boolean = false) => {
     window.open(QQ_GROUP.joinUrl, "_blank", "noopener,noreferrer");
     markQqGroupJoined();
+    if (dontShowAgain) {
+      localStorage.setItem("qq_popup_dismissed", "true");
+    }
     setPopupOpen(false);
     window.setTimeout(() => setCollapsed(true), 150);
   }, [markQqGroupJoined]);
@@ -199,10 +206,11 @@ function QQGroupPopup({
   onClose,
 }: {
   onJoin: () => void;
-  onClose: () => void;
+  onClose: (dontShowAgain?: boolean) => void;
 }) {
   const [copied, setCopied] = React.useState(false);
   const [hasQR, setHasQR] = React.useState(true);
+  const [dontShowAgain, setDontShowAgain] = React.useState(false);
 
   const handleCopy = async () => {
     try {
@@ -215,6 +223,8 @@ function QQGroupPopup({
     }
   };
 
+  const handleClose = () => onClose(dontShowAgain);
+
   return (
     <>
       {/* 遮罩 */}
@@ -223,7 +233,7 @@ function QQGroupPopup({
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
         transition={{ duration: 0.2 }}
-        onClick={onClose}
+        onClick={handleClose}
         className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm"
       />
 
@@ -245,7 +255,7 @@ function QQGroupPopup({
           {/* 关闭按钮 */}
           <button
             type="button"
-            onClick={onClose}
+            onClick={handleClose}
             aria-label="关闭"
             className="absolute right-3 top-3 z-10 flex h-8 w-8 items-center justify-center rounded-full bg-white/20 text-primary-foreground backdrop-blur transition-colors hover:bg-white/30"
           >
@@ -324,10 +334,21 @@ function QQGroupPopup({
             </div>
           )}
 
+          {/* 不再弹窗选项 */}
+          <label className="flex cursor-pointer items-center justify-center gap-2 text-xs text-muted-foreground hover:text-foreground transition-colors">
+            <input
+              type="checkbox"
+              checked={dontShowAgain}
+              onChange={(e) => setDontShowAgain(e.target.checked)}
+              className="h-4 w-4 rounded border-border text-primary focus:ring-primary"
+            />
+            <span>关闭后不再弹窗</span>
+          </label>
+
           {/* 主操作：脉冲光晕 + 渐变 */}
           <Button
             size="lg"
-            onClick={onJoin}
+            onClick={() => onJoin(dontShowAgain)}
             className="h-12 w-full rounded-xl bg-gradient-to-r from-primary to-accent text-base font-semibold text-primary-foreground shadow-glow-primary animate-pulse-soft hover:opacity-95"
           >
             <ExternalLink className="mr-2 h-4 w-4" />

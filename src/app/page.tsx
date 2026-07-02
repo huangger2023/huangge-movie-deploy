@@ -1,12 +1,12 @@
-﻿﻿"use client";
+﻿"use client";
 
 import * as React from "react";
 import dynamic from "next/dynamic";
 import { Header } from "@/components/site/header";
 import { Footer } from "@/components/site/footer";
-import { VoiceChatEntry } from "@/components/site/voice-chat-entry";
+import { FloatingActions } from "@/components/site/floating-actions";
 import { useAppStore } from "@/lib/store";
-import { toast } from "sonner";
+import { PixelDemoView } from "@/components/views/pixel-demo-view";
 
 // 所有视图懒加载，避免 SSR 时编译所有组件导致内存爆炸
 const HomeView = dynamic(() => import("@/components/views/home-view").then(m => ({ default: m.HomeView })), { ssr: false });
@@ -18,6 +18,7 @@ const DashboardView = dynamic(() => import("@/components/views/dashboard-view").
 const AdminView = dynamic(() => import("@/components/views/admin-view").then(m => ({ default: m.AdminView })), { ssr: false });
 const AuthView = dynamic(() => import("@/components/views/auth-view").then(m => ({ default: m.AuthView })), { ssr: false });
 const WorkspaceView = dynamic(() => import("@/components/views/workspace-view").then(m => ({ default: m.WorkspaceView })), { ssr: false });
+const ActivationView = dynamic(() => import("@/components/views/activation-view").then(m => ({ default: m.ActivationView })), { ssr: false });
 const ProductHomeView = dynamic(() => import("@/components/views/product-home-view").then(m => ({ default: m.ProductHomeView })), { ssr: false });
 const CineflowSuiteView = dynamic(() => import("@/components/views/cineflow-suite-view").then(m => ({ default: m.CineflowSuiteView })), { ssr: false });
 const AiCopywritingView = dynamic(() => import("@/components/views/ai-copywriting-view").then(m => ({ default: m.AiCopywritingView })), { ssr: false });
@@ -26,11 +27,10 @@ const VisualMatchView = dynamic(() => import("@/components/views/visual-match-vi
 const ResourcesView = dynamic(() => import("@/components/views/resources-view").then(m => ({ default: m.ResourcesView })), { ssr: false });
 const PaymentView = dynamic(() => import("@/components/views/payment-view").then(m => ({ default: m.PaymentView })), { ssr: false });
 const ContactView = dynamic(() => import("@/components/views/contact-view").then(m => ({ default: m.ContactView })), { ssr: false });
-const ActivationView = dynamic(() => import("@/components/views/activation-view").then(m => ({ default: m.ActivationView })), { ssr: false });
-const TalkFenggeView = dynamic(() => import("@/components/views/talk-fengge-view").then(m => ({ default: m.TalkFenggeView })), { ssr: false });
 
 export default function Page() {
   const view = useAppStore((s) => s.view);
+  const user = useAppStore((s) => s.user);
   const setUser = useAppStore((s) => s.setUser);
   const [synced, setSynced] = React.useState(false);
   const [authChecked, setAuthChecked] = React.useState(false);
@@ -41,12 +41,26 @@ export default function Page() {
     fetch("/api/auth")
       .then((r) => r.json())
       .then((d) => {
-        if (d?.user) setUser(d.user);
+        if (d?.user) {
+          setUser(d.user);
+          // 管理员刷新页面后自动进入管理后台（除非正在看其他页面）
+          if (d.user.role === "ADMIN") {
+            const currentView = useAppStore.getState().view;
+            // 只在 home/auth/activation 这几个默认页时才自动跳转
+            if (["home", "auth", "activation"].includes(currentView)) {
+              useAppStore.setState({ view: "admin" });
+            }
+            // 管理员免授权，直接标记完成
+            setSynced(true);
+            setAuthChecked(true);
+            return;
+          }
+        }
       })
       .catch(() => {})
       .finally(() => {
         setSynced(true);
-        // Check authorization status after user sync
+        // Check authorization status after user sync（仅对学员执行）
         fetch("/api/authorization")
           .then((r) => r.json())
           .then((d) => {
@@ -71,8 +85,23 @@ export default function Page() {
       });
   }, [setUser]);
 
-  // 授权未开启、或已激活、或正在查看激活/登录页时不拦截
-  const blocked = needsActivation && view !== "activation" && view !== "auth";
+  // 修复 localStorage 中缓存的旧视图（已删除的页面如 product-home、payment 等）
+  // zustand persist 会恢复旧的 view 值，需要清理掉不存在的视图
+  const VALID_VIEWS: string[] = [
+    "home", "courses", "course-detail", "script-generator", "tools",
+    "dashboard", "admin", "auth", "workspace", "activation",
+    "product-home", "cineflow-suite", "ai-copywriting", "hgtts-pro",
+    "visual-match", "resources", "payment", "contact",
+    "pixel-demo",
+  ];
+  React.useEffect(() => {
+    if (view && !VALID_VIEWS.includes(view)) {
+      useAppStore.setState({ view: "home" });
+    }
+  }, [view]);
+
+  // 授权未开启、或已激活、或正在查看激活/登录页时不拦截；管理员永不拦截
+  const blocked = needsActivation && view !== "activation" && view !== "auth" && user?.role !== "ADMIN";
 
   return (
     <div className="flex min-h-screen flex-col">
@@ -80,7 +109,7 @@ export default function Page() {
       <main className="flex-1">
         {!synced || !authChecked ? (
           <div className="flex h-[60vh] items-center justify-center">
-            <div className="h-8 w-8 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+            <div className="h-10 w-10 animate-spin rounded-full border-[3px] border-primary/20 border-t-primary" />
           </div>
         ) : blocked ? (
           <ActivationView />
@@ -88,7 +117,7 @@ export default function Page() {
           <React.Suspense
             fallback={
               <div className="flex h-[60vh] items-center justify-center">
-                <div className="h-8 w-8 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+                <div className="h-10 w-10 animate-spin rounded-full border-[3px] border-primary/20 border-t-primary" />
               </div>
             }
           >
@@ -100,6 +129,8 @@ export default function Page() {
             {view === "dashboard" && <DashboardView />}
             {view === "admin" && <AdminView />}
             {view === "auth" && <AuthView />}
+            {view === "activation" && <ActivationView />}
+            {view === "workspace" && <WorkspaceView />}
             {view === "product-home" && <ProductHomeView />}
             {view === "cineflow-suite" && <CineflowSuiteView />}
             {view === "ai-copywriting" && <AiCopywritingView />}
@@ -108,15 +139,12 @@ export default function Page() {
             {view === "resources" && <ResourcesView />}
             {view === "payment" && <PaymentView />}
             {view === "contact" && <ContactView />}
-            {view === "talk-fengge" && <TalkFenggeView />}
-            {view === "activation" && <ActivationView />}
-            {view === "workspace" && <WorkspaceView />}
+              {view === "pixel-demo" && <PixelDemoView />}
           </React.Suspense>
         )}
       </main>
-      <VoiceChatEntry />
+      <FloatingActions />
       <Footer />
-      <div id="build-marker" style={{display:"none"}} aria-hidden="true">BUILD_VERSION:20260630-v3</div>
     </div>
   );
 }

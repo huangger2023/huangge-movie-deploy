@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import * as React from "react";
 import { motion } from "framer-motion";
@@ -161,7 +161,7 @@ export function DashboardView() {
             initial={{ opacity: 0, scale: 0.9 }}
             animate={{ opacity: 1, scale: 1 }}
             transition={{ duration: 0.4 }}
-            className="mb-6 flex h-20 w-20 items-center justify-center rounded-full bg-gradient-to-br from-primary to-accent shadow-glow-primary"
+            className="mb-6 flex h-20 w-20 items-center justify-center rounded-full bg-gradient-to-br from-green-500 to-blue-500 shadow-glow-primary"
           >
             <LogIn className="h-10 w-10 text-primary-foreground" />
           </motion.div>
@@ -171,7 +171,7 @@ export function DashboardView() {
           </p>
           <Button
             onClick={() => setView("auth")}
-            className="bg-gradient-to-r from-primary to-accent text-primary-foreground"
+            className="bg-gradient-to-r from-green-500 to-blue-500 text-white"
           >
             <LogIn className="mr-1.5 h-4 w-4" />
             去登录
@@ -320,7 +320,7 @@ export function DashboardView() {
           <Card className="glass-card overflow-hidden">
             <CardContent className="flex flex-col gap-4 p-5 sm:flex-row sm:items-center sm:justify-between sm:p-6">
               <div className="flex items-center gap-4">
-                <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-primary to-accent text-xl font-bold text-primary-foreground shadow-glow-primary">
+                <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-green-500 to-blue-500 text-xl font-bold text-primary-foreground shadow-glow-primary">
                   {user.name.slice(0, 1)}
                 </div>
                 <div className="min-w-0">
@@ -332,7 +332,7 @@ export function DashboardView() {
                       className={
                         user.role === "ADMIN"
                           ? "bg-accent text-accent-foreground"
-                          : "bg-primary/10 text-primary"
+                          : "bg-green-500/10 text-green-600 dark:text-green-400"
                       }
                     >
                       {user.role === "ADMIN" ? (
@@ -546,7 +546,7 @@ export function DashboardView() {
                                     className={cn(
                                       "h-4 w-4 transition-colors",
                                       s.isFavorite
-                                        ? "fill-primary text-primary"
+                                        ? "fill-primary text-green-600 dark:text-green-400"
                                         : "text-muted-foreground"
                                     )}
                                   />
@@ -619,7 +619,7 @@ export function DashboardView() {
                     <Card className="p-5">
                       <CardHeader className="px-0 pt-0">
                         <CardTitle className="flex items-center gap-2 text-sm">
-                          <LayoutDashboard className="h-4 w-4 text-primary" />
+                          <LayoutDashboard className=h-4 w-4 text-green-600 dark:text-green-400" />
                           工具使用分布
                         </CardTitle>
                         <CardDescription className="text-xs">
@@ -750,7 +750,7 @@ function FilterChip({
       className={cn(
         "rounded-full border px-3 py-1 text-xs font-medium transition-colors",
         active
-          ? "border-primary bg-primary text-primary-foreground"
+          ? "border-green-500 bg-green-500 text-white"
           : "border-border bg-background text-muted-foreground hover:bg-accent hover:text-accent-foreground"
       )}
     >
@@ -774,14 +774,14 @@ function EmptyState({
 }) {
   return (
     <div className="flex flex-col items-center justify-center rounded-2xl border border-dashed bg-card/30 px-6 py-16 text-center">
-      <div className="mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-primary/10 text-primary">
+      <div className="mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-green-500/10 text-green-600 dark:text-green-400">
         <Icon className="h-7 w-7" />
       </div>
       <h3 className="mb-1.5 text-base font-semibold">{title}</h3>
       <p className="mb-5 max-w-sm text-sm text-muted-foreground">{desc}</p>
       <Button
         onClick={onClick}
-        className="bg-gradient-to-r from-primary to-accent text-primary-foreground"
+        className="bg-gradient-to-r from-green-500 to-blue-500 text-white"
       >
         {cta}
         <ArrowRight className="ml-1.5 h-4 w-4" />

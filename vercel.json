@@ -1,5 +1,6 @@
 {
-  "buildCommand": null,
+  "buildCommand": "next build",
   "outputDirectory": ".next",
-  "framework": "nextjs"
+  "framework": "nextjs",
+  "regions": ["sin1"]
 }

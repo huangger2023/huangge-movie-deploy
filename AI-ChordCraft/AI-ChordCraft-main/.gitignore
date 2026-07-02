@@ -1,0 +1,14 @@
+__pycache__/
+*.py[cod]
+.env
+.venv/
+venv/
+outputs/
+uploads/
+logs/
+*.log
+.DS_Store
+
+# Third-party code and checkpoints are prepared locally.
+third_party/*
+!third_party/README.md

@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import * as React from "react";
 import { motion } from "framer-motion";
@@ -271,7 +271,7 @@ export function AdminView() {
         <div className="absolute inset-0 spotlight-soft opacity-60" />
         <div className="absolute inset-0 code-bg opacity-40" />
         <div className="container-page relative flex flex-col items-center justify-center pt-24 pb-20 text-center">
-          <div className="font-mono text-[11px] uppercase tracking-[0.12em] text-destructive">
+          <div className="text-sm font-medium text-destructive">
             / admin · 403 · forbidden
           </div>
           <h2 className="font-display mt-3 text-balance text-[36px] font-extrabold leading-[1.05] tracking-[-0.025em] sm:text-[48px]">
@@ -284,7 +284,7 @@ export function AdminView() {
             <Button
               variant="outline"
               onClick={() => setView("home")}
-              className="rounded-[2px] font-mono text-[12px] uppercase tracking-[0.08em]"
+              className="rounded-lg text-sm font-medium"
             >
               <ArrowLeft className="mr-1.5 h-3.5 w-3.5" />
               返回首页
@@ -292,7 +292,7 @@ export function AdminView() {
             {!user && (
               <Button
                 onClick={() => setView("auth")}
-                className="rounded-[2px] font-mono text-[12px] uppercase tracking-[0.08em]"
+                className="rounded-lg text-sm font-medium"
               >
                 去登录
               </Button>
@@ -384,8 +384,8 @@ export function AdminView() {
     },
     {
       icon: Users,
-      label: "学员总数",
-      value: "—",
+      label: "报名总数",
+      value: String(courses.reduce((s, c) => s + (c._count?.enrollments ?? 0), 0)),
       tint: "bg-amber-500/10 text-amber-500",
     },
     {
@@ -409,7 +409,7 @@ export function AdminView() {
           className="flex flex-col gap-5 sm:flex-row sm:items-end sm:justify-between"
         >
           <div>
-            <div className="font-mono text-[11px] uppercase tracking-[0.12em] text-amber-500 dark:text-amber-400">
+            <div className="text-sm font-medium text-amber-500 dark:text-amber-400">
               / admin · ROLE = ADMIN
             </div>
             <h1 className="font-display mt-3 text-balance text-[36px] font-extrabold leading-[1.05] tracking-[-0.025em] sm:text-[52px]">
@@ -421,7 +421,7 @@ export function AdminView() {
           </div>
           <Button
             onClick={openCreate}
-            className="self-start rounded-[2px] font-mono text-[12px] uppercase tracking-[0.06em] sm:self-auto"
+            className="self-start rounded-lg text-sm font-medium sm:self-auto"
           >
             <Plus className="mr-1.5 h-3.5 w-3.5" />
             新建课程
@@ -438,11 +438,11 @@ export function AdminView() {
           {stats.map((s) => (
             <div
               key={s.label}
-              className="rounded-[2px] border border-border/70 bg-card/50 p-5"
+              className="rounded-xl border border-border/70 bg-card/50 p-5"
             >
               <div className="flex items-center gap-2">
                 <s.icon className="h-3.5 w-3.5 text-muted-foreground" />
-                <span className="font-mono text-[10px] uppercase tracking-[0.12em] text-muted-foreground">
+                <span className="text-xs font-medium text-muted-foreground">
                   {s.label}
                 </span>
               </div>
@@ -465,38 +465,45 @@ export function AdminView() {
           className="mt-8"
         >
           <Tabs defaultValue="courses" className="w-full">
-            <TabsList className="grid h-auto w-full max-w-2xl grid-cols-5 rounded-[2px] border border-border/70 bg-card/40 p-0.5">
+            <TabsList className="grid h-auto w-full max-w-2xl grid-cols-6 rounded-xl border border-border/70 bg-card/40 p-0.5">
               <TabsTrigger
                 value="courses"
-                className="gap-1.5 rounded-[2px] py-1.5 font-mono text-[11px] uppercase tracking-[0.08em] data-[state=active]:bg-foreground/10"
+                className="gap-1.5 rounded-lg py-1.5 text-xs font-medium data-[state=active]:bg-foreground/10"
               >
                 <BookOpen className="h-3 w-3" />
                 课程管理
               </TabsTrigger>
               <TabsTrigger
                 value="students"
-                className="gap-1.5 rounded-[2px] py-1.5 font-mono text-[11px] uppercase tracking-[0.08em] data-[state=active]:bg-foreground/10"
+                className="gap-1.5 rounded-lg py-1.5 text-xs font-medium data-[state=active]:bg-foreground/10"
               >
                 <Users className="h-3 w-3" />
                 学员管理
               </TabsTrigger>
               <TabsTrigger
                 value="enrollments"
-                className="gap-1.5 rounded-[2px] py-1.5 font-mono text-[11px] uppercase tracking-[0.08em] data-[state=active]:bg-foreground/10"
+                className="gap-1.5 rounded-lg py-1.5 text-xs font-medium data-[state=active]:bg-foreground/10"
               >
                 <ClipboardCheck className="h-3 w-3" />
                 报名审核
               </TabsTrigger>
               <TabsTrigger
                 value="ai-models"
-                className="gap-1.5 rounded-[2px] py-1.5 font-mono text-[11px] uppercase tracking-[0.08em] data-[state=active]:bg-foreground/10"
+                className="gap-1.5 rounded-lg py-1.5 text-xs font-medium data-[state=active]:bg-foreground/10"
               >
                 <Cpu className="h-3 w-3" />
                 AI 模型
               </TabsTrigger>
               <TabsTrigger
+                value="fengge"
+                className="gap-1.5 rounded-lg py-1.5 text-xs font-medium data-[state=active]:bg-foreground/10"
+              >
+                <KeyRound className="h-3 w-3" />
+                风格配置
+              </TabsTrigger>
+              <TabsTrigger
                 value="authorization"
-                className="gap-1.5 rounded-[2px] py-1.5 font-mono text-[11px] uppercase tracking-[0.08em] data-[state=active]:bg-foreground/10"
+                className="gap-1.5 rounded-lg py-1.5 text-xs font-medium data-[state=active]:bg-foreground/10"
               >
                 <ShieldCheck className="h-3 w-3" />
                 授权管理
@@ -590,7 +597,7 @@ export function AdminView() {
                               免费
                             </span>
                           ) : (
-                            <span className="text-sm font-semibold text-primary">
+                            <span className="text-sm font-semibold text-green-600 dark:text-green-400">
                               ¥{c.price}
                             </span>
                           )}
@@ -598,7 +605,7 @@ export function AdminView() {
                         <TableCell>
                           <span className="flex items-center gap-1 text-sm">
                             <Users className="h-3 w-3 text-muted-foreground" />
-                            {c.studentsCount.toLocaleString()}
+                            {(c._count?.enrollments ?? 0).toLocaleString()}
                           </span>
                         </TableCell>
                         <TableCell>
@@ -664,6 +671,11 @@ export function AdminView() {
             {/* AI 模型配置 Tab */}
             <TabsContent value="ai-models" className="mt-4">
               <AiModelsTab />
+            </TabsContent>
+
+            {/* 风格配置 Tab */}
+            <TabsContent value="fengge" className="mt-4">
+              <FenggeConfigTab />
             </TabsContent>
 
             {/* 授权管理 Tab */}
@@ -748,7 +760,7 @@ export function AdminView() {
                     className={cn(
                       "relative aspect-[4/3] overflow-hidden rounded-md border-2 transition-all",
                       form.coverImage === url
-                        ? "border-primary ring-2 ring-primary/30"
+                        ? "border-green-500 ring-2 ring-green-500/30"
                         : "border-transparent opacity-70 hover:opacity-100"
                     )}
                   >
@@ -968,7 +980,7 @@ export function AdminView() {
             <Button
               onClick={handleSave}
               disabled={saving}
-              className="bg-gradient-to-r from-primary to-accent text-primary-foreground"
+              className="bg-gradient-to-r from-green-500 to-blue-500 text-white"
             >
               {saving ? (
                 <>
@@ -1118,7 +1130,7 @@ function LessonsManager({
       <DialogContent className="max-h-[90vh] max-w-3xl overflow-y-auto scrollbar-thin">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
-            <ListChecks className="h-4 w-4 text-primary" />
+            <ListChecks className=h-4 w-4 text-green-600 dark:text-green-400" />
             课时管理 · {course.title}
           </DialogTitle>
           <DialogDescription>
@@ -1150,7 +1162,7 @@ function LessonsManager({
                   <button
                     onClick={() => handleMove(lesson, -1)}
                     disabled={idx === 0}
-                    className="rounded p-0.5 text-muted-foreground hover:bg-primary/10 hover:text-primary disabled:opacity-30"
+                    className="rounded p-0.5 text-muted-foreground hover:bg-green-500/10 hover:text-green-600 dark:hover:text-green-400 disabled:opacity-30"
                     title="上移"
                   >
                     <ChevronUp className="h-3.5 w-3.5" />
@@ -1161,7 +1173,7 @@ function LessonsManager({
                   <button
                     onClick={() => handleMove(lesson, 1)}
                     disabled={idx === lessons.length - 1}
-                    className="rounded p-0.5 text-muted-foreground hover:bg-primary/10 hover:text-primary disabled:opacity-30"
+                    className="rounded p-0.5 text-muted-foreground hover:bg-green-500/10 hover:text-green-600 dark:hover:text-green-400 disabled:opacity-30"
                     title="下移"
                   >
                     <ChevronDown className="h-3.5 w-3.5" />
@@ -1176,7 +1188,7 @@ function LessonsManager({
                       </Badge>
                     )}
                     {lesson.videoUrl && (
-                      <Badge variant="outline" className="shrink-0 gap-0.5 text-[10px] text-primary">
+                      <Badge variant="outline" className="shrink-0 gap-0.5 text-[10px] text-green-600 dark:text-green-400">
                         <Cloud className="h-2.5 w-2.5" />
                         网盘
                       </Badge>
@@ -1242,7 +1254,7 @@ function LessonsManager({
                 setEditingLesson(null);
                 setShowForm(true);
               }}
-              className="gap-1.5 bg-gradient-to-r from-primary to-accent text-primary-foreground"
+              className="gap-1.5 bg-gradient-to-r from-green-500 to-blue-500 text-white"
             >
               <Plus className="h-4 w-4" />
               新增课时
@@ -1404,7 +1416,7 @@ function LessonForm({
                   ul: ({ children }) => <ul className="mb-2 ml-4 list-disc space-y-1">{children}</ul>,
                   ol: ({ children }) => <ol className="mb-2 ml-4 list-decimal space-y-1">{children}</ol>,
                   li: ({ children }) => <li>{children}</li>,
-                  strong: ({ children }) => <strong className="font-semibold text-primary">{children}</strong>,
+                  strong: ({ children }) => <strong className="font-semibold text-green-600 dark:text-green-400">{children}</strong>,
                   blockquote: ({ children }) => (
                     <blockquote className="my-2 border-l-2 border-primary/40 bg-primary/5 px-3 py-1.5 italic">
                       {children}
@@ -1470,7 +1482,7 @@ function LessonForm({
       <Button
         onClick={handleSubmit}
         disabled={saving || !title.trim()}
-        className="w-full gap-1.5 bg-gradient-to-r from-primary to-accent text-primary-foreground"
+        className="w-full gap-1.5 bg-gradient-to-r from-green-500 to-blue-500 text-white"
       >
         {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}
         {saving ? "保存中…" : lesson ? "保存修改" : "添加课时"}
@@ -1659,7 +1671,7 @@ function StudentsTab({ courses }: { courses: AdminCourse[] }) {
                 className="flex items-center gap-4 border-b border-border/40 p-4 transition-colors hover:bg-muted/30"
               >
                 {/* 头像 */}
-                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-primary to-accent text-sm font-bold text-primary-foreground">
+                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-green-500 to-blue-500 text-sm font-bold text-primary-foreground">
                   {s.name.slice(0, 1)}
                 </div>
                 {/* 信息 */}
@@ -1692,7 +1704,7 @@ function StudentsTab({ courses }: { courses: AdminCourse[] }) {
                 {/* 进度（如有筛选课程） */}
                 {s.enrollment && (
                   <div className="shrink-0 w-24 text-right">
-                    <div className="text-xs font-semibold text-primary">
+                    <div className="text-xs font-semibold text-green-600 dark:text-green-400">
                       {Math.round(s.enrollment.progress)}%
                     </div>
                     <div className="text-[10px] text-muted-foreground">
@@ -2012,7 +2024,7 @@ function EnrollmentsTab({ courses }: { courses: AdminCourse[] }) {
               >
                 {/* 用户头像 + 信息 */}
                 <div className="flex min-w-0 flex-1 items-center gap-3">
-                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-primary to-accent text-sm font-bold text-primary-foreground">
+                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-green-500 to-blue-500 text-sm font-bold text-primary-foreground">
                     {e.user.name?.slice(0, 1) || "?"}
                   </div>
                   <div className="min-w-0">
@@ -2130,7 +2142,7 @@ function EnrollmentsTab({ courses }: { courses: AdminCourse[] }) {
                       }}
                       className="flex w-full items-center gap-2 px-3 py-2 text-left text-xs transition-colors hover:bg-muted"
                     >
-                      <div className="flex h-6 w-6 items-center justify-center rounded-full bg-primary/10 text-[9px] font-bold text-primary">
+                      <div className="flex h-6 w-6 items-center justify-center rounded-full bg-green-500/10 text-[9px] font-bold text-green-600 dark:text-green-400">
                         {u.name.slice(0, 1)}
                       </div>
                       <span className="font-medium">{u.name}</span>
@@ -2443,19 +2455,26 @@ function AiModelsTab() {
           <div className="flex items-center gap-2">
             <span className={cn("h-2 w-2 rounded-full", globalModelPublic ? "bg-emerald-500" : "bg-amber-500")} />
             <div>
-              <span className="text-sm font-medium">全局模型公开</span>
+              <span className="text-sm font-medium">
+                {globalModelPublic ? "全局使用" : "仅管理员使用"}
+              </span>
               <span className="ml-2 text-[11px] text-muted-foreground">
                 {globalModelPublic
-                  ? "普通用户可使用管理员配置的全局默认模型"
-                  : "仅管理员可用全局模型，普通用户需配置自己的模型"}
+                  ? "所有用户均可使用管理员配置的全局默认模型"
+                  : "仅管理员可用全局模型，普通用户需自行配置自己的模型"}
               </span>
             </div>
           </div>
-          <Switch
-            checked={globalModelPublic}
-            disabled={togglingPublic}
-            onCheckedChange={handleToggleGlobalPublic}
-          />
+          <div className="flex items-center gap-2">
+            <span className="text-[11px] font-medium text-muted-foreground">
+              {globalModelPublic ? "全局" : "仅管理员"}
+            </span>
+            <Switch
+              checked={globalModelPublic}
+              disabled={togglingPublic}
+              onCheckedChange={handleToggleGlobalPublic}
+            />
+          </div>
         </div>
 
         <CardContent className="p-0">
@@ -2495,7 +2514,13 @@ function AiModelsTab() {
                               </Badge>
                             )}
                           </div>
-                          <div className="font-mono text-[11px] text-muted-foreground">{m.model}</div>
+                          <div className="mt-0.5 flex flex-wrap gap-1">
+                          {m.model.split(",").map((mname) => mname.trim()).filter(Boolean).map((mname) => (
+                            <span key={mname} className="rounded bg-muted px-1.5 py-0.5 font-mono text-[10px] text-muted-foreground">
+                              {mname}
+                            </span>
+                          ))}
+                        </div>
                         </div>
                       </div>
                     </TableCell>
@@ -2590,15 +2615,18 @@ function AiModelsTab() {
               </p>
             </div>
 
-            {/* 模型名 */}
+            {/* 模型名（支持多个，逗号分隔） */}
             <div className="grid gap-2">
-              <Label>模型名</Label>
-              <Input
+              <Label>模型名（套餐）</Label>
+              <Textarea
                 value={form.model}
                 onChange={(e) => setForm({ ...form, model: e.target.value })}
-                placeholder="glm-4-flash"
-                className="font-mono text-xs"
+                placeholder="glm-4-flash, glm-4-air, glm-4"
+                className="min-h-[60px] resize-none font-mono text-xs"
               />
+              <p className="text-[11px] text-muted-foreground">
+                套餐内可填多个模型名，用逗号分隔。用户生成文案时可自由选择其中之一
+              </p>
             </div>
 
             {/* API Key（隐藏输入） */}
@@ -2707,8 +2735,6 @@ function AiModelsTab() {
       </AlertDialog>
 
       <XfyunAsrConfigCard />
-
-      <FenggeConfigTab />
 
       <p className="px-1 text-[11px] text-muted-foreground">
         共 {models.length} 个模型 · 最后更新 {models[0] ? formatDate(models[0].updatedAt) : "—"}
@@ -2980,7 +3006,7 @@ function MarkdownToolbar({ textareaRef, onChange }: MarkdownToolbarProps) {
           type="button"
           onClick={t.action}
           title={t.title}
-          className="flex h-7 w-7 items-center justify-center rounded text-muted-foreground transition-colors hover:bg-background hover:text-primary"
+          className="flex h-7 w-7 items-center justify-center rounded text-muted-foreground transition-colors hover:bg-background hover:text-green-600 dark:hover:text-green-400"
         >
           <t.icon className="h-3.5 w-3.5" />
         </button>

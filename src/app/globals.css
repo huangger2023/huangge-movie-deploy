@@ -43,92 +43,159 @@
   --radius-xl: calc(var(--radius) + 4px);
 }
 
+/* ═══════════════════════════════════════════
+   Pixel Art Theme — Light Mode
+   ═══════════════════════════════════════════ */
 :root {
-  --radius: 0.75rem;
-  /* Light mode: warm paper / cinematic light */
-  --background: oklch(0.985 0.005 60);
-  --foreground: oklch(0.18 0.01 30);
-  --card: oklch(1 0 0);
-  --card-foreground: oklch(0.18 0.01 30);
-  --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.18 0.01 30);
-  --primary: oklch(0.62 0.24 16);       /* rose-red, Douyin vibe */
-  --primary-foreground: oklch(0.98 0.01 60);
-  --secondary: oklch(0.96 0.01 60);
-  --secondary-foreground: oklch(0.25 0.02 20);
-  --muted: oklch(0.96 0.008 60);
-  --muted-foreground: oklch(0.5 0.02 30);
-  --accent: oklch(0.78 0.16 75);        /* amber/gold for premium */
-  --accent-foreground: oklch(0.22 0.03 50);
-  --destructive: oklch(0.577 0.245 27.325);
-  --border: oklch(0.91 0.008 60);
-  --input: oklch(0.92 0.008 60);
-  --ring: oklch(0.62 0.24 16);
-  --chart-1: oklch(0.62 0.24 16);
-  --chart-2: oklch(0.78 0.16 75);
-  --chart-3: oklch(0.6 0.18 350);
-  --chart-4: oklch(0.7 0.15 145);
-  --chart-5: oklch(0.55 0.2 300);
-  --sidebar: oklch(0.985 0.005 60);
-  --sidebar-foreground: oklch(0.18 0.01 30);
-  --sidebar-primary: oklch(0.62 0.24 16);
-  --sidebar-primary-foreground: oklch(0.98 0.01 60);
-  --sidebar-accent: oklch(0.96 0.008 60);
-  --sidebar-accent-foreground: oklch(0.25 0.02 20);
-  --sidebar-border: oklch(0.91 0.008 60);
-  --sidebar-ring: oklch(0.62 0.24 16);
+  --radius: 0;
+  /* Pixel warm palette */
+  --background: #F5E6C8;
+  --foreground: #3A2008;
+  --card: #F0DDB4;
+  --card-foreground: #3A2008;
+  --popover: #F0DDB4;
+  --popover-foreground: #3A2008;
+  --primary: #8B4513;
+  --primary-foreground: #F5E6C8;
+  --secondary: #DEC494;
+  --secondary-foreground: #3A2008;
+  --muted: #DEC494;
+  --muted-foreground: #8B7A66;
+  --accent: #E87722;
+  --accent-foreground: #2A1810;
+  --destructive: #DC143C;
+  --border: #7A4A24;
+  --input: #F0DDB4;
+  --ring: #8B4513;
+  /* Chart pixel colors */
+  --chart-1: #6B8E23;
+  --chart-2: #4A8BCA;
+  --chart-3: #E87722;
+  --chart-4: #A855F7;
+  --chart-5: #DC143C;
+  /* Sidebar pixel */
+  --sidebar: #F5E6C8;
+  --sidebar-foreground: #3A2008;
+  --sidebar-primary: #8B4513;
+  --sidebar-primary-foreground: #F5E6C8;
+  --sidebar-accent: #DEC494;
+  --sidebar-accent-foreground: #3A2008;
+  --sidebar-border: #7A4A24;
+  --sidebar-ring: #8B4513;
 }
 
+/* ═══════════════════════════════════════════
+   Pixel Art Theme — Dark Mode
+   ═══════════════════════════════════════════ */
 .dark {
-  /* Dark mode: cinematic theater black with warm undertone */
-  --background: oklch(0.16 0.008 30);
-  --foreground: oklch(0.97 0.005 60);
-  --card: oklch(0.21 0.01 30);
-  --card-foreground: oklch(0.97 0.005 60);
-  --popover: oklch(0.21 0.01 30);
-  --popover-foreground: oklch(0.97 0.005 60);
-  --primary: oklch(0.68 0.23 14);       /* bright rose in dark */
-  --primary-foreground: oklch(0.16 0.01 30);
-  --secondary: oklch(0.27 0.015 30);
-  --secondary-foreground: oklch(0.97 0.005 60);
-  --muted: oklch(0.25 0.012 30);
-  --muted-foreground: oklch(0.7 0.015 60);
-  --accent: oklch(0.82 0.16 80);        /* gold */
-  --accent-foreground: oklch(0.18 0.02 50);
-  --destructive: oklch(0.704 0.191 22.216);
-  --border: oklch(1 0 0 / 10%);
-  --input: oklch(1 0 0 / 14%);
-  --ring: oklch(0.68 0.23 14);
-  --chart-1: oklch(0.68 0.23 14);
-  --chart-2: oklch(0.82 0.16 80);
-  --chart-3: oklch(0.65 0.2 350);
-  --chart-4: oklch(0.72 0.16 145);
-  --chart-5: oklch(0.6 0.22 300);
-  --sidebar: oklch(0.19 0.008 30);
-  --sidebar-foreground: oklch(0.97 0.005 60);
-  --sidebar-primary: oklch(0.68 0.23 14);
-  --sidebar-primary-foreground: oklch(0.16 0.01 30);
-  --sidebar-accent: oklch(0.27 0.015 30);
-  --sidebar-accent-foreground: oklch(0.97 0.005 60);
-  --sidebar-border: oklch(1 0 0 / 10%);
-  --sidebar-ring: oklch(0.68 0.23 14);
+  --background: #2A1810;
+  --foreground: #FBF1DC;
+  --card: #3D2817;
+  --card-foreground: #FBF1DC;
+  --popover: #3D2817;
+  --popover-foreground: #FBF1DC;
+  --primary: #D4A76A;
+  --primary-foreground: #2A1810;
+  --secondary: #5A4430;
+  --secondary-foreground: #FBF1DC;
+  --muted: #5A4430;
+  --muted-foreground: #B8A88E;
+  --accent: #E87722;
+  --accent-foreground: #2A1810;
+  --destructive: #FF4444;
+  --border: #9A6B40;
+  --input: #3D2817;
+  --ring: #D4A76A;
+  /* Chart pixel colors (dark) */
+  --chart-1: #9BC03A;
+  --chart-2: #6BA3E5;
+  --chart-3: #FF9944;
+  --chart-4: #C084FF;
+  --chart-5: #FF6666;
+  /* Sidebar pixel (dark) */
+  --sidebar: #2A1810;
+  --sidebar-foreground: #FBF1DC;
+  --sidebar-primary: #D4A76A;
+  --sidebar-primary-foreground: #2A1810;
+  --sidebar-accent: #5A4430;
+  --sidebar-accent-foreground: #FBF1DC;
+  --sidebar-border: #9A6B40;
+  --sidebar-ring: #D4A76A;
 }
+
+/* ═══════════════════════════════════════════
+   Global Pixel Overrides
+   ═══════════════════════════════════════════ */
 
 @layer base {
   * {
     @apply border-border outline-ring/50;
+    /* Pixel art core: NO border-radius anywhere */
+    border-radius: 0 !important;
   }
   body {
     @apply bg-background text-foreground;
     font-feature-settings: "rlig" 1, "calt" 1;
+    /* Pixel body font: VT323 for numbers/English, system font fallback for Chinese */
+    font-family: 'VT323', 'Microsoft YaHei', 'PingFang SC', monospace;
+    font-size: 18px;
   }
   html {
     scroll-behavior: smooth;
   }
 }
 
-/* Custom scrollbar */
+/* Pixel heading font */
+h1, h2, h3, h4, h5, h6 {
+  font-family: 'Press Start 2P', 'VT323', monospace;
+  letter-spacing: 0.5px;
+}
+h1 { font-size: 20px; }
+h2 { font-size: 16px; }
+h3 { font-size: 14px; }
+h4 { font-size: 12px; }
+h5 { font-size: 11px; }
+h6 { font-size: 10px; }
+
+/* ═══════════════════════════════════════════
+   Container — Page Layout
+   ═══════════════════════════════════════════ */
+.container-page {
+  width: 100%;
+  max-width: 1224px;
+  margin: 0 auto;
+  padding-left: 1.5rem;
+  padding-right: 1.5rem;
+}
+@media (min-width: 640px) {
+  .container-page {
+    padding-left: 2rem;
+    padding-right: 2rem;
+  }
+}
+@media (min-width: 1024px) {
+  .container-page {
+    padding-left: 3rem;
+    padding-right: 3rem;
+  }
+}
+
+/* ═══════════════════════════════════════════
+   Pixel Custom Utilities
+   ═══════════════════════════════════════════ */
 @layer utilities {
+  /* Pixel hard shadows */
+  .pixel-shadow {
+    box-shadow: 6px 6px 0 0 var(--border) !important;
+  }
+  .pixel-shadow-sm {
+    box-shadow: 4px 4px 0 0 var(--border) !important;
+  }
+  .pixel-shadow-lg {
+    box-shadow: 8px 8px 0 0 var(--border) !important;
+  }
+
+  /* Pixel scrollbar */
   .scrollbar-thin {
     scrollbar-width: thin;
     scrollbar-color: var(--primary) transparent;
@@ -141,65 +208,102 @@
     background: transparent;
   }
   .scrollbar-thin::-webkit-scrollbar-thumb {
-    background-color: color-mix(in oklch, var(--primary) 40%, transparent);
-    border-radius: 9999px;
+    background-color: var(--primary);
+    border-radius: 0;
   }
   .scrollbar-thin::-webkit-scrollbar-thumb:hover {
-    background-color: color-mix(in oklch, var(--primary) 70%, transparent);
+    background-color: color-mix(in srgb, var(--primary) 80%, transparent);
   }
 
-  /* Cinematic gradient backgrounds */
+  /* Pixel grid background — use green accent */
   .bg-cinema-radial {
     background-image:
-      radial-gradient(ellipse 80% 50% at 50% -10%, color-mix(in oklch, var(--primary) 22%, transparent), transparent),
-      radial-gradient(ellipse 60% 50% at 90% 10%, color-mix(in oklch, var(--accent) 12%, transparent), transparent);
+      radial-gradient(circle, rgba(126,184,113,0.15) 2px, transparent 2px),
+      linear-gradient(to right, rgba(139,94,60,0.06) 1px, transparent 1px),
+      linear-gradient(to bottom, rgba(139,94,60,0.06) 1px, transparent 1px);
+    background-size: 24px 24px, 48px 48px, 48px 48px;
+    background-color: var(--background);
   }
+
+  /* Pixel grid faint */
   .bg-grid-faint {
     background-image:
-      linear-gradient(to right, color-mix(in oklch, var(--foreground) 4%, transparent) 1px, transparent 1px),
-      linear-gradient(to bottom, color-mix(in oklch, var(--foreground) 4%, transparent) 1px, transparent 1px);
-    background-size: 48px 48px;
+      linear-gradient(to right, rgba(122,74,36,0.10) 1px, transparent 1px),
+      linear-gradient(to bottom, rgba(122,74,36,0.10) 1px, transparent 1px);
+    background-size: 32px 32px;
   }
+
+  /* Glass → pixel solid */
+  .glass-card, .glass-header {
+    background: var(--card) !important;
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+    border-radius: 0 !important;
+  }
+
+  /* Glow → pixel shadow */
+  .shadow-glow-primary {
+    box-shadow: 6px 6px 0 0 var(--border) !important;
+  }
+  .shadow-soft {
+    box-shadow: 4px 4px 0 0 var(--border) !important;
+  }
+  .shadow-elevated {
+    box-shadow: 8px 8px 0 0 var(--border) !important;
+  }
+
+  /* Text gradients — harmonious pixel palette (参考像素游戏配色) */
   .text-gradient-primary {
-    background: linear-gradient(120deg, var(--primary), color-mix(in oklch, var(--accent) 80%, var(--primary)));
-    -webkit-background-clip: text;
-    background-clip: text;
-    color: transparent;
+    background: linear-gradient(135deg, #22C55E 0%, #3B82F6 50%, #A855F7 100%) !important;
+    -webkit-background-clip: text !important;
+    background-clip: text !important;
+    -webkit-text-fill-color: transparent !important;
+    color: transparent !important;
   }
   .text-gradient-gold {
-    background: linear-gradient(120deg, var(--accent), color-mix(in oklch, var(--primary) 30%, var(--accent)));
-    -webkit-background-clip: text;
-    background-clip: text;
-    color: transparent;
+    background: linear-gradient(135deg, #F97316 0%, #EAB308 100%) !important;
+    -webkit-background-clip: text !important;
+    background-clip: text !important;
+    -webkit-text-fill-color: transparent !important;
+    color: transparent !important;
   }
-  .glass-card {
-    background: color-mix(in oklch, var(--card) 70%, transparent);
-    backdrop-filter: blur(12px);
-    -webkit-backdrop-filter: blur(12px);
+
+  /* Pixel border double-line effect */
+  .pixel-border {
+    border: 2px solid var(--border);
+    box-shadow: 4px 4px 0 0 var(--border);
   }
-  .shadow-glow-primary {
-    box-shadow: 0 0 0 1px color-mix(in oklch, var(--primary) 20%, transparent),
-      0 8px 30px -8px color-mix(in oklch, var(--primary) 40%, transparent);
-  }
+
+  /* Pixel animation: float → step-based */
   .animate-float {
-    animation: float 6s ease-in-out infinite;
+    animation: pixel-float 1.2s steps(3) infinite;
   }
-  @keyframes float {
-    0%, 100% { transform: translateY(0); }
-    50% { transform: translateY(-10px); }
+  @keyframes pixel-float {
+    0% { transform: translateY(0); }
+    50% { transform: translateY(-8px); }
+    100% { transform: translateY(0); }
   }
+
+  /* Pixel shimmer */
   .animate-shimmer {
     background: linear-gradient(
       90deg,
       transparent 0%,
-      color-mix(in oklch, var(--primary) 15%, transparent) 50%,
+      var(--primary) 50%,
       transparent 100%
     );
     background-size: 200% 100%;
-    animation: shimmer 2s linear infinite;
+    animation: pixel-shimmer 1.5s steps(10) infinite;
   }
-  @keyframes shimmer {
+  @keyframes pixel-shimmer {
     0% { background-position: 200% 0; }
     100% { background-position: -200% 0; }
+  }
+
+  /* Pixel card — wrapper style */
+  .pixel-card {
+    background: var(--card);
+    border: 2px solid var(--border);
+    box-shadow: 6px 6px 0 0 var(--border);
   }
 }

@@ -1,4 +1,4 @@
-﻿﻿"use client";
+"use client";
 
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
@@ -13,22 +13,17 @@ export type ViewKey =
   | "admin"
   | "auth"
   | "workspace"
-  | "cineflow"
-  | "ai-copywriting"
-  | "hgtts"
-  | "visual-match"
-  | "pricing"
+  | "talk-fengge"
+  | "activation"
   | "product-home"
   | "cineflow-suite"
+  | "ai-copywriting"
   | "hgtts-pro"
+  | "visual-match"
   | "resources"
   | "payment"
   | "contact"
-  | "suite-detail"
-  | "tts-clone"
-  | "copywriting-trial"
-  | "talk-fengge"
-  | "activation";
+  | "pixel-demo";
 
 export type GeneratorStage = "爆款" | "精选";
 
@@ -78,7 +73,7 @@ interface AppState {
 export const useAppStore = create<AppState>()(
   persist(
     (set) => ({
-      view: "home",
+      view: "pixel-demo",
       selectedCourseId: null,
       selectedTool: null,
       generatorPresetStage: null,
@@ -141,6 +136,23 @@ export const useAppStore = create<AppState>()(
     }),
     {
       name: "yingshu-store",
+      version: 3,
+      migrate: (persistedState: any, version: number) => {
+        // v1 → v2: 清理已删除的视图
+        // v2 → v3: 恢复 product/payment/contact 等方案页面 + 修正管理员默认视图
+        if (version < 3 && persistedState?.view) {
+          const validViews = [
+            "home", "courses", "course-detail", "script-generator", "tools",
+            "dashboard", "admin", "auth", "workspace", "talk-fengge", "activation",
+            "product-home", "cineflow-suite", "ai-copywriting", "hgtts-pro",
+            "visual-match", "resources", "payment", "contact", "pixel-demo",
+          ];
+          if (!validViews.includes(persistedState.view)) {
+            persistedState.view = "home";
+          }
+        }
+        return persistedState;
+      },
       partialize: (state) => ({
         user: state.user,
         view: state.view,
