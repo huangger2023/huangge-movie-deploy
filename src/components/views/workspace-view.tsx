@@ -244,7 +244,7 @@ export function WorkspaceView() {
           <div>
             <div className="mb-2 flex items-center gap-2">
               <FolderKanban className="h-5 w-5 text-green-600 dark:text-green-400" />
-              <span className=text-sm font-medium text-green-600 dark:text-green-400">创作工作台</span>
+              <span className="text-sm font-medium text-green-600 dark:text-green-400">创作工作台</span>
             </div>
             <h1 className="text-3xl font-bold tracking-tight">我的创作项目</h1>
             <p className="mt-2 text-sm text-muted-foreground">

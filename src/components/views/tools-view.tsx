@@ -1171,7 +1171,7 @@ function PolishTool() {
               </Card>
               <Card className="flex min-h-0 flex-col overflow-hidden border-primary/30 p-4">
                 <div className="mb-3 flex shrink-0 items-center justify-between">
-                  <span className=flex items-center gap-1.5 text-sm font-medium text-green-600 dark:text-green-400">
+                  <span className="flex items-center gap-1.5 text-sm font-medium text-green-600 dark:text-green-400">
                     <Sparkles className="h-4 w-4" />
                     润色后
                   </span>

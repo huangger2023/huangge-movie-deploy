@@ -765,7 +765,7 @@ function LessonRow({
               </>
             )}
             {lesson.videoUrl && (
-              <span className=flex items-center gap-0.5 text-green-600 dark:text-green-400">
+              <span className="flex items-center gap-0.5 text-green-600 dark:text-green-400">
                 <Cloud className="h-3 w-3" />
                 网盘
               </span>

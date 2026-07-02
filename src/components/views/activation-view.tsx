@@ -258,19 +258,19 @@ export function ActivationView() {
           <p className="text-xs font-medium text-muted-foreground">激活说明</p>
           <ul className="space-y-1.5 text-xs text-muted-foreground/80">
             <li className="flex gap-2">
-              <span className=font-mono text-green-600 dark:text-green-400">1.</span>
+              <span className="font-mono text-green-600 dark:text-green-400">1.</span>
               复制上方「设备机器码」，发送给管理员
             </li>
             <li className="flex gap-2">
-              <span className=font-mono text-green-600 dark:text-green-400">2.</span>
+              <span className="font-mono text-green-600 dark:text-green-400">2.</span>
               管理员在「激活码管理器」中选择「荒哥独选」产品，粘贴机器码并生成激活码
             </li>
             <li className="flex gap-2">
-              <span className=font-mono text-green-600 dark:text-green-400">3.</span>
+              <span className="font-mono text-green-600 dark:text-green-400">3.</span>
               将生成的激活码粘贴到上方输入框，点击激活
             </li>
             <li className="flex gap-2">
-              <span className=font-mono text-green-600 dark:text-green-400">4.</span>
+              <span className="font-mono text-green-600 dark:text-green-400">4.</span>
               激活码有有效期限制，过期后需重新获取
             </li>
           </ul>
