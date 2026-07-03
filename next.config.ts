@@ -7,10 +7,8 @@ const nextConfig: NextConfig = {
   },
   reactStrictMode: false,
   serverExternalPackages: ["@libsql/client"],
-  experimental: {
-    outputFileTracingIncludes: {
-      "/api/**/*": ["./db/**/*"],
-    },
+  outputFileTracingIncludes: {
+    "/api/**/*": ["./db/**/*"],
   },
 };
 
