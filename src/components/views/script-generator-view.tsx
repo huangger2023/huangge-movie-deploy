@@ -35,6 +35,8 @@ import {
   Camera,
   ScrollText,
   FolderKanban,
+  RotateCcw,
+  PenLine,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -61,12 +63,15 @@ import {
 import { useAppStore } from "@/lib/store";
 import { SaveToWorkspaceDialog, type WorkspaceField } from "@/components/site/save-to-workspace-dialog";
 import { useSSEAgentSearch } from "@/lib/use-sse-agent-search";
+import { DoubanSearchButton } from "@/components/site/douban-search-button";
+import { PasteTitleButton } from "@/components/site/paste-title-button";
 import { cn } from "@/lib/utils";
 
 const GENRES = ["剧情", "悬疑", "科幻", "爱情", "动作", "恐怖", "喜剧", "犯罪", "动画", "纪录片"];
 const STYLES = ["悬疑反转", "情感共鸣", "速看爽文", "深度解读", "搞笑吐槽"];
-const DURATIONS = ["60秒", "90秒", "3分钟", "5分钟"];
-const HOOK_TYPES = ["悬念提问", "反差冲击", "情感代入", "数据震撼", "故事引入"];
+const DURATIONS_PRESET = ["10分钟", "15分钟", "20分钟", "25分钟", "30分钟", "45分钟", "60分钟"];
+const DURATIONS = [...DURATIONS_PRESET, "自定义"];
+const HOOK_TYPES = ["反差冲击", "悬念提问", "情感代入", "数据震撼", "故事引入"];
 const TONES = ["犀利", "温暖", "幽默", "神秘", "激情"];
 
 const SAMPLE_MOVIES = [
@@ -82,24 +87,31 @@ interface FormState {
   genre: string;
   style: string;
   duration: string;
+  customDuration: string;
   hookType: string;
   tone: string;
   keywords: string;
   extraNotes: string;
+  // 剧情增量参数
+  entryPoint: string;   // 内容切入点
+  uniqueAngle: string;  // 独家角度
 }
 
 const DEFAULT_FORM: FormState = {
   movieTitle: "",
   genre: "悬疑",
   style: "悬疑反转",
-  duration: "90秒",
-  hookType: "悬念提问",
+  duration: "10分钟",
+  customDuration: "",
+  hookType: "反差冲击",
   tone: "犀利",
   keywords: "",
   extraNotes: "",
+  entryPoint: "完整剧情梳理",
+  uniqueAngle: "专业电影解说视角",
 };
 
-type AgentMode = "none" | "web" | "doc";
+type AgentMode = "web" | "doc";
 
 interface PlotDoc {
   id: string;
@@ -151,17 +163,83 @@ const sleep = (ms: number) => new Promise<void>((r) => setTimeout(r, ms));
 export function ScriptGeneratorView() {
   const user = useAppStore((s) => s.user);
   const setView = useAppStore((s) => s.setView);
+  const selectTool = useAppStore((s) => s.selectTool);
   const sseSearch = useSSEAgentSearch();
 
   const [form, setForm] = React.useState<FormState>(DEFAULT_FORM);
-  const [agentMode, setAgentMode] = React.useState<AgentMode>("none");
+  const [mediaType, setMediaType] = React.useState<"movie" | "tv">("movie");
+  const [tvTitle, setTvTitle] = React.useState("");
+  const [episodeNumber, setEpisodeNumber] = React.useState(1);
+  const [agentMode, setAgentMode] = React.useState<AgentMode>("web");
   const [loading, setLoading] = React.useState(false);
-  const [result, setResult] = React.useState<string | null>(null);
-  const [savedId, setSavedId] = React.useState<string | null>(null);
+  const [result, setResult] = React.useState<string | null>(() => {
+    // 从 localStorage 恢复上次生成的文案
+    if (typeof window !== "undefined") {
+      return localStorage.getItem("script-generator-result");
+    }
+    return null;
+  });
+  const [savedId, setSavedId] = React.useState<string | null>(() => {
+    if (typeof window !== "undefined") {
+      return localStorage.getItem("script-generator-savedId");
+    }
+    return null;
+  });
+  
+  // 文案统计
+  const resultStats = React.useMemo(() => {
+    if (!result) return null;
+    
+    // 只计算文案主体，移除标题、风格标签等非文案部分
+    // 找到文案主体截止位置（标题、风格、标签等标记之前）
+    const scriptEndMarkers = ['# 标题', '## 标题', '标题：', '风格标签', '# 风格', '## 风格', '标签：', '# 标签'];
+    let scriptContent = result;
+    for (const marker of scriptEndMarkers) {
+      const idx = result.indexOf(marker);
+      if (idx > 0) {
+        scriptContent = result.slice(0, idx);
+        break;
+      }
+    }
+    
+    // 移除 Markdown 格式
+    const plainText = scriptContent
+      .replace(/[#*`_\[\]()]/g, '')
+      .replace(/!\[.*?\]\(.*?\)/g, '')
+      .trim();
+    
+    const chars = plainText.length;
+    const sentences = (plainText.match(/[。！？.!?]+/g) || []).length;
+    const paragraphs = plainText.split(/\n\n+/).filter(p => p.trim()).length;
+    // 1万字≈30分钟，即每分钟约333字
+    const readingTime = Math.ceil(chars / 333);
+    
+    return { chars, words: chars, sentences, paragraphs, readingTime };
+  }, [result]);
+  
   const [isFav, setIsFav] = React.useState(false);
   const [ttsLoading, setTtsLoading] = React.useState(false);
   const [audioUrl, setAudioUrl] = React.useState<string | null>(null);
   const audioUrlRef = React.useRef<string | null>(null);
+
+  // 选中文本调整相关状态
+  const [selectionPopup, setSelectionPopup] = React.useState<{
+    visible: boolean;
+    x: number;
+    y: number;
+    selectedText: string;
+    context: string;
+  }>({ visible: false, x: 0, y: 0, selectedText: "", context: "" });
+  const [adjustingText, setAdjustingText] = React.useState<string | null>(null);
+  const [adjustPrompt, setAdjustPrompt] = React.useState("");
+  const [adjustLoading, setAdjustLoading] = React.useState(false);
+
+  // 切换电视剧时，强制使用剧情文档模式
+  React.useEffect(() => {
+    if (mediaType === "tv") {
+      setAgentMode("doc");
+    }
+  }, [mediaType]);
 
   // Agent state
   const [steps, setSteps] = React.useState<AgentStep[]>(INITIAL_STEPS);
@@ -181,6 +259,33 @@ export function ScriptGeneratorView() {
   const [saveWsOpen, setSaveWsOpen] = React.useState(false);
   const [saveWsField, setSaveWsField] = React.useState<WorkspaceField>("script");
   const [saveWsValue, setSaveWsValue] = React.useState("");
+
+  // 可用模型列表
+  interface AvailableModel {
+    id: string;
+    name: string;
+    model: string;
+    baseUrl: string;
+  }
+  const [availableModels, setAvailableModels] = React.useState<AvailableModel[]>([]);
+  const [selectedModel, setSelectedModel] = React.useState<{
+    configId: string;
+    modelName: string;
+  } | null>(null);
+
+  // 获取可用模型列表
+  React.useEffect(() => {
+    fetch("/api/ai/available-models")
+      .then((res) => res.json())
+      .then((data) => {
+        const models = data.models || [];
+        setAvailableModels(models);
+        if (models.length > 0) {
+          setSelectedModel({ configId: models[0].id, modelName: models[0].model });
+        }
+      })
+      .catch(() => {});
+  }, []);
 
   const openSaveToWorkspace = (field: WorkspaceField, value: string) => {
     if (!user) {
@@ -206,6 +311,23 @@ export function ScriptGeneratorView() {
       }
     };
   }, []);
+
+  // 文案持久化到 localStorage
+  React.useEffect(() => {
+    if (result) {
+      localStorage.setItem("script-generator-result", result);
+    } else {
+      localStorage.removeItem("script-generator-result");
+    }
+  }, [result]);
+
+  React.useEffect(() => {
+    if (savedId) {
+      localStorage.setItem("script-generator-savedId", savedId);
+    } else {
+      localStorage.removeItem("script-generator-savedId");
+    }
+  }, [savedId]);
 
   const fetchPlots = React.useCallback(async () => {
     setPlotsLoading(true);
@@ -265,19 +387,25 @@ export function ScriptGeneratorView() {
   };
 
   const callScript = async (plotContext?: string) => {
+    const title = mediaType === "tv" ? tvTitle.trim() : form.movieTitle.trim();
     const res = await fetch("/api/ai/script", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        movieTitle: form.movieTitle.trim(),
+        movieTitle: title,
         genre: form.genre,
         style: form.style,
-        duration: form.duration,
+        duration: form.duration === "自定义" ? form.customDuration : form.duration,
         hookType: form.hookType,
         tone: form.tone,
         keywords: form.keywords.trim() || undefined,
         extraNotes: form.extraNotes.trim() || undefined,
         plotContext,
+        configId: selectedModel?.configId || undefined,
+        modelName: selectedModel?.modelName || undefined,
+        // 剧情增量参数
+        entryPoint: form.entryPoint.trim() || undefined,
+        uniqueAngle: form.uniqueAngle.trim() || undefined,
       }),
     });
     if (!res.ok) {
@@ -288,8 +416,9 @@ export function ScriptGeneratorView() {
   };
 
   const handleGenerate = async () => {
-    if (!form.movieTitle.trim()) {
-      toast.error("请先填写电影名称");
+    const title = mediaType === "tv" ? tvTitle.trim() : form.movieTitle.trim();
+    if (!title) {
+      toast.error(mediaType === "tv" ? "请先填写剧名" : "请先填写电影名称");
       return;
     }
     if (agentMode === "doc" && !selectedPlot) {
@@ -316,14 +445,14 @@ export function ScriptGeneratorView() {
         await sleep(150);
         // === 阶段1：SSE 流式联网搜索 ===
         startStep(1);
-        const sseResult = await sseSearch.search(form.movieTitle.trim(), form.genre);
+        const sseResult = await sseSearch.search(title, form.genre);
         if (!sseResult) {
           throw new Error("联网搜索失败");
         }
         finishStep(1, `找到 ${sseResult.sources.length} 个来源`);
         // 用 SSE 结果构造 SearchResult 兼容现有渲染
         const sdata: SearchResult = {
-          movieTitle: sseResult.movieTitle || form.movieTitle.trim(),
+          movieTitle: sseResult.movieTitle || title,
           snippets: sseResult.snippets,
           fullPlot: sseResult.fullPlot,
           combined: sseResult.combined,
@@ -364,13 +493,6 @@ export function ScriptGeneratorView() {
         setSavedId(scriptData.savedId);
         toast.success("文案生成成功", {
           description: `基于剧情文档《${selectedPlot!.movieTitle}》创作`,
-        });
-      } else {
-        const scriptData = await callScript(undefined);
-        setResult(scriptData.output);
-        setSavedId(scriptData.savedId);
-        toast.success("文案生成成功！", {
-          description: scriptData.savedId ? "已自动保存到你的创作历史" : "登录后可保存到历史",
         });
       }
     } catch (e) {
@@ -429,6 +551,33 @@ export function ScriptGeneratorView() {
     }
   };
 
+  const handleAdjustText = async (originalText: string) => {
+    if (!result || !adjustPrompt.trim()) return;
+    setAdjustLoading(true);
+    try {
+      const res = await fetch("/api/ai/adjust-text", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          originalText,
+          prompt: adjustPrompt,
+          fullText: result,
+        }),
+      });
+      if (!res.ok) throw new Error("调整失败");
+      const data = await res.json() as { output: string };
+      setResult(data.output);
+      toast.success("文案已调整");
+      setAdjustingText(null);
+      setAdjustPrompt("");
+      setSelectionPopup((p) => ({ ...p, visible: false }));
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "调整失败，请重试");
+    } finally {
+      setAdjustLoading(false);
+    }
+  };
+
   const handleTTS = async () => {
     if (!result) return;
     if (audioUrlRef.current) {
@@ -442,7 +591,12 @@ export function ScriptGeneratorView() {
       const res = await fetch("/api/ai/tts", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ text, voice: "tongtong", speed: 1.0 }),
+        body: JSON.stringify({ 
+          text, 
+          mode: "design",
+          style: form.tone || "标准播音腔",
+          speed: 1.0 
+        }),
       });
       if (!res.ok) throw new Error("语音合成失败");
       const blob = await res.blob();
@@ -457,13 +611,34 @@ export function ScriptGeneratorView() {
     }
   };
 
+  // 重置文案
+  const handleReset = () => {
+    setResult(null);
+    setSavedId(null);
+    setIsFav(false);
+    localStorage.removeItem("script-generator-result");
+    localStorage.removeItem("script-generator-savedId");
+    toast.success("已重置，可以重新生成了");
+  };
+
+  // 跳转到语音试听界面
+  const handleGoToVoice = (script: string) => {
+    if (script) {
+      localStorage.setItem("tts-pending-script", script);
+    }
+    selectTool("tts");
+    setView("tools");
+    toast.success("已跳转到语音试听，文案已自动传入");
+  };
+
   const fillSample = (title: string, genre: string) => {
     setForm((p) => ({ ...p, movieTitle: title, genre }));
     toast.success(`已填入《${title}》`, { description: "可点击生成按钮立即创作" });
   };
 
   const openPlotDialog = () => {
-    setPlotForm({ movieTitle: form.movieTitle.trim(), content: "" });
+    const title = mediaType === "tv" ? tvTitle.trim() : form.movieTitle.trim();
+    setPlotForm({ movieTitle: title, content: "" });
     setPlotDialogOpen(true);
   };
 
@@ -518,19 +693,19 @@ export function ScriptGeneratorView() {
       <div className="pointer-events-none absolute inset-0 bg-cinema-radial" />
       <div className="pointer-events-none absolute inset-0 bg-grid-faint opacity-30" />
 
-      <div className="relative mx-auto max-w-7xl px-4 py-10 sm:px-6 lg:px-8 lg:py-14">
+      <div className="relative mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
         {/* 顶部标题区 */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5 }}
-          className="mb-8 text-center"
+          className="mx-auto mb-6 max-w-2xl text-center"
         >
           <div className="mb-4 flex items-center justify-center gap-2">
-            <Badge className="gap-1.5 border-green-500/30 bg-green-500/10 px-3 py-1 text-green-600 dark:text-green-400">
+            <Badge className="gap-1.5 border-primary/30 bg-primary/10 px-3 py-1 text-primary">
               <span className="relative flex h-2 w-2">
-                <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-green-500 opacity-75" />
-                <span className="relative inline-flex h-2 w-2 rounded-full bg-green-500" />
+                <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-primary opacity-75" />
+                <span className="relative inline-flex h-2 w-2 rounded-full bg-primary" />
               </span>
               <Bot className="h-3.5 w-3.5" />
               Agent 协作模式
@@ -545,16 +720,17 @@ export function ScriptGeneratorView() {
         </motion.div>
 
         {/* 主体三栏：左表单 / 中 Agent 面板 / 右结果 */}
-        <div className="grid grid-cols-1 gap-6 lg:grid-cols-[38fr_32fr_30fr] lg:gap-6">
+        <div className="flex h-[calc(100vh-18rem)] items-stretch gap-6 overflow-hidden">
           {/* 左栏：表单 */}
           <motion.div
             initial={{ opacity: 0, x: -20 }}
             animate={{ opacity: 1, x: 0 }}
             transition={{ duration: 0.5, delay: 0.1 }}
+            className="flex w-[38%] min-w-0 flex-col overflow-hidden"
           >
-            <Card className="glass-card overflow-hidden p-6">
-              <div className="mb-5 flex items-center gap-2">
-                <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-green-500/10 text-green-600 dark:text-green-400">
+            <Card className="glass-card flex h-full flex-col overflow-hidden p-5 sm:p-6">
+              <div className="mb-5 flex items-center gap-2 shrink-0">
+                <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary/10 text-primary">
                   <Clapperboard className="h-5 w-5" />
                 </div>
                 <div>
@@ -563,15 +739,117 @@ export function ScriptGeneratorView() {
                 </div>
               </div>
 
-              <div className="space-y-4">
-                <Field label="电影名称" required>
-                  <Input
-                    value={form.movieTitle}
-                    onChange={(e) => updateField("movieTitle", e.target.value)}
-                    placeholder="例如：消失的她"
-                    className="h-10"
-                  />
-                </Field>
+              {/* 作品类型切换 */}
+              <div className="mb-4 flex items-center gap-2 shrink-0">
+                <span className="text-xs font-medium text-foreground/80">作品类型</span>
+                <div className="flex gap-1 rounded-lg border border-border/70 bg-muted/30 p-0.5">
+                  <button
+                    type="button"
+                    onClick={() => setMediaType("movie")}
+                    className={cn(
+                      "rounded-md px-3 py-1 text-xs font-medium transition-all",
+                      mediaType === "movie"
+                        ? "bg-foreground text-background shadow-sm"
+                        : "text-muted-foreground hover:text-foreground"
+                    )}
+                  >
+                    🎬 电影
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setMediaType("tv")}
+                    className={cn(
+                      "rounded-md px-3 py-1 text-xs font-medium transition-all",
+                      mediaType === "tv"
+                        ? "bg-foreground text-background shadow-sm"
+                        : "text-muted-foreground hover:text-foreground"
+                    )}
+                  >
+                    📺 电视剧
+                  </button>
+                </div>
+              </div>
+
+              {/* AI 模型选择 */}
+              {availableModels.length > 0 && (
+                <div className="mb-3 rounded-lg border border-primary/20 bg-primary/5 px-3 py-2.5 shrink-0">
+                  <Field label="AI 模型">
+                    <Select
+                      value={selectedModel ? `${selectedModel.configId}::${selectedModel.modelName}` : ""}
+                      onValueChange={(val) => {
+                        const parts = val.split("::");
+                        if (parts.length === 2) {
+                          setSelectedModel({ configId: parts[0], modelName: parts[1] });
+                        }
+                      }}
+                    >
+                      <SelectTrigger className="h-9 border-primary/30 bg-primary/10 text-xs font-medium text-primary">
+                        <SelectValue placeholder="选择模型" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {availableModels.map((am) => (
+                          <SelectItem key={`${am.id}-${am.model}`} value={`${am.id}::${am.model}`} className="text-xs">
+                            {am.name} - {am.model}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </Field>
+                </div>
+              )}
+
+              <div className="flex-1 space-y-4 overflow-y-auto p-1">
+                {mediaType === "movie" ? (
+                  <Field label="电影名称" required>
+                    <div className="flex items-center gap-2">
+                      <Input
+                        value={form.movieTitle}
+                        onChange={(e) => updateField("movieTitle", e.target.value)}
+                        placeholder="例如：消失的她"
+                        className="h-10 flex-1"
+                      />
+                      <PasteTitleButton
+                        onPasteText={(text) => updateField("movieTitle", text)}
+                      />
+                      <DoubanSearchButton
+                        mode="home"
+                        label="豆瓣"
+                      />
+                    </div>
+                  </Field>
+                ) : (
+                  <div className="flex items-end gap-2">
+                    <div className="flex-1 min-w-0">
+                      <Field label="剧名" required>
+                        <Input
+                          value={tvTitle}
+                          onChange={(e) => setTvTitle(e.target.value)}
+                          placeholder="例如：狂飙"
+                          className="h-10"
+                        />
+                      </Field>
+                    </div>
+                    <div className="shrink-0">
+                      <Field label="集数">
+                        <Select value={String(episodeNumber)} onValueChange={(v) => setEpisodeNumber(Number(v))}>
+<SelectTrigger className="h-10 min-w-[90px]">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent className="min-w-[90px]">
+                          {Array.from({ length: 60 }, (_, i) => (
+                            <SelectItem key={i + 1} value={String(i + 1)} className="text-xs">
+                              第{i + 1}集
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </Field>
+                    </div>
+                    <div className="flex items-end pb-2">
+                      <DoubanSearchButton mode="home" label="豆瓣" />
+                    </div>
+                  </div>
+                )}
 
                 <div className="grid grid-cols-2 gap-3">
                   <Field label="电影类型">
@@ -584,7 +862,26 @@ export function ScriptGeneratorView() {
 
                 <div className="grid grid-cols-2 gap-3">
                   <Field label="视频时长">
-                    <SelectField value={form.duration} onChange={(v) => updateField("duration", v)} options={DURATIONS} />
+                    {form.duration === "自定义" ? (
+                      <div className="flex gap-2">
+                        <Input
+                          value={form.customDuration || ""}
+                          onChange={(e) => updateField("customDuration", e.target.value)}
+                          placeholder="如：40分钟"
+                          className="h-10 flex-1"
+                        />
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => updateField("duration", "10分钟")}
+                          className="h-10 shrink-0"
+                        >
+                          重置
+                        </Button>
+                      </div>
+                    ) : (
+                      <SelectField value={form.duration} onChange={(v) => updateField("duration", v)} options={DURATIONS} />
+                    )}
                   </Field>
                   <Field label="黄金3秒钩子">
                     <SelectField value={form.hookType} onChange={(v) => updateField("hookType", v)} options={HOOK_TYPES} />
@@ -604,6 +901,24 @@ export function ScriptGeneratorView() {
                   />
                 </Field>
 
+                <Field label="内容切入点" hint="决定解说侧重点">
+                  <Input
+                    value={form.entryPoint}
+                    onChange={(e) => updateField("entryPoint", e.target.value)}
+                    placeholder="例如：完整剧情梳理、反转深度解析、导演彩蛋盘点"
+                    className="h-10"
+                  />
+                </Field>
+
+                <Field label="独家角度" hint="让内容不可替代">
+                  <Input
+                    value={form.uniqueAngle}
+                    onChange={(e) => updateField("uniqueAngle", e.target.value)}
+                    placeholder="例如：新片首发解说、冷门佳片挖掘、多刷发现的细节"
+                    className="h-10"
+                  />
+                </Field>
+
                 <Field label="补充要求" hint="可选">
                   <Textarea
                     value={form.extraNotes}
@@ -612,15 +927,18 @@ export function ScriptGeneratorView() {
                     className="min-h-[80px] resize-none"
                   />
                 </Field>
+              </div>
 
+              <div className="shrink-0 space-y-3 pt-4">
                 <Button
                   onClick={handleGenerate}
                   disabled={loading}
                   size="lg"
                   className={cn(
-                    "h-12 w-full gap-2 rounded-xl bg-gradient-to-r from-green-500 to-blue-500",
-                    "text-base font-semibold text-white shadow-glow-primary",
-                    "transition-all hover:opacity-95 active:scale-[0.99]"
+                    "h-12 w-full gap-2 rounded-xl bg-gradient-to-r from-primary to-accent",
+                    "text-base font-semibold text-primary-foreground shadow-glow-primary",
+                    "transition-all hover:opacity-95 active:scale-[0.99] shrink-0",
+                    "pb-1"
                   )}
                 >
                   {loading ? (
@@ -647,13 +965,14 @@ export function ScriptGeneratorView() {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5, delay: 0.2 }}
+            className="flex w-[30%] min-w-0 flex-col overflow-hidden"
           >
             <AgentPanel
               agentMode={agentMode}
               setAgentMode={setAgentMode}
               isLoggedIn={!!user}
               steps={steps}
-              movieTitle={form.movieTitle.trim() || "电影"}
+              movieTitle={mediaType === "tv" ? tvTitle.trim() || "电视剧" : form.movieTitle.trim() || "电影"}
               isRunning={isAgentRunning || loading || sseSearch.searching}
               searchResult={searchResult}
               liveSources={sseSearch.sources}
@@ -668,6 +987,7 @@ export function ScriptGeneratorView() {
               selectedPlot={selectedPlot}
               plotExpanded={plotExpanded}
               setPlotExpanded={setPlotExpanded}
+              mediaType={mediaType}
             />
           </motion.div>
 
@@ -676,8 +996,9 @@ export function ScriptGeneratorView() {
             initial={{ opacity: 0, x: 20 }}
             animate={{ opacity: 1, x: 0 }}
             transition={{ duration: 0.5, delay: 0.3 }}
+            className="flex w-[32%] min-w-0 flex-col overflow-hidden"
           >
-            <Card className="glass-card flex min-h-[600px] flex-col overflow-hidden">
+            <Card className="glass-card flex h-full flex-col overflow-hidden p-5 sm:p-6">
               {loading && agentMode === "web" ? (
                 <AgentRunningSkeleton />
               ) : loading ? (
@@ -685,16 +1006,19 @@ export function ScriptGeneratorView() {
               ) : result ? (
                 <ResultPanel
                   result={result}
-                  isFav={isFav}
-                  savedId={savedId}
-                  ttsLoading={ttsLoading}
-                  audioUrl={audioUrl}
-                  isLoggedIn={!!user}
+                  resultStats={resultStats}
                   onCopy={handleCopy}
-                  onFavorite={handleFavorite}
                   onRegenerate={handleGenerate}
-                  onTTS={handleTTS}
-                  onSaveToWorkspace={openSaveToWorkspace}
+                  onReset={handleReset}
+                  onGoToVoice={handleGoToVoice}
+                  selectionPopup={selectionPopup}
+                  adjustingText={adjustingText}
+                  adjustPrompt={adjustPrompt}
+                  adjustLoading={adjustLoading}
+                  onAdjustText={handleAdjustText}
+                  onSetAdjustingText={setAdjustingText}
+                  onSetAdjustPrompt={setAdjustPrompt}
+                  onSetSelectionPopup={setSelectionPopup}
                 />
               ) : (
                 <EmptyState onPick={fillSample} />
@@ -706,17 +1030,17 @@ export function ScriptGeneratorView() {
 
       {/* 新建剧情文档 Dialog */}
       <Dialog open={plotDialogOpen} onOpenChange={setPlotDialogOpen}>
-        <DialogContent className="sm:max-w-2xl">
+        <DialogContent className="sm:max-w-2xl max-h-[85vh] flex flex-col">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
-              <FileText className="h-4 w-4 text-green-600 dark:text-green-400" />
+              <FileText className="h-4 w-4 text-primary" />
               新建剧情文档
             </DialogTitle>
             <DialogDescription>
-              可粘贴豆瓣 / 维基的剧情简介，或你自己整理的真实剧情描述。AI 将基于此内容创作解说文案，确保人物、情节、结局与真实画面一致。
+              可粘贴豆瓣 / 维基的剧情简介，或上传 TXT 文档 / 字幕文件。AI 将基于此内容创作解说文案。
             </DialogDescription>
           </DialogHeader>
-          <div className="space-y-4">
+          <div className="space-y-4 overflow-y-auto pr-2 p-px">
             <Field label="电影名称" required>
               <Input
                 value={plotForm.movieTitle}
@@ -725,12 +1049,55 @@ export function ScriptGeneratorView() {
                 className="h-10"
               />
             </Field>
+            <Field label="上传文件" hint="支持 TXT、字幕文件 (SRT/ASS)">
+              <div className="flex items-center gap-2">
+                <input
+                  type="file"
+                  accept=".txt,.srt,.ass,.vtt"
+                  className="hidden"
+                  id="plot-file-upload"
+                  onChange={(e) => {
+                    const file = e.target.files?.[0];
+                    if (!file) return;
+                    const reader = new FileReader();
+                    reader.onload = (ev) => {
+                      let text = ev.target?.result as string || "";
+                      // 处理字幕文件：移除时间轴和标签
+                      if (file.name.endsWith(".srt") || file.name.endsWith(".ass") || file.name.endsWith(".vtt")) {
+                        text = text
+                          .replace(/^\d+\s*\n[\d:, -->]+\n/gm, "") // 移除序号和时间轴
+                          .replace(/<[^>]+>/g, "") // 移除HTML/ASS标签
+                          .replace(/\{[^}]+\}/g, "") // 移除ASS样式标签
+                          .replace(/\\N/g, "\n") // ASS换行符
+                          .trim();
+                      }
+                      setPlotForm((p) => ({ ...p, content: text.replace(/\s+/g, " ").trim() }));
+                      toast.success(`已加载 ${file.name}，${text.length} 字`);
+                    };
+                    reader.readAsText(file);
+                    e.target.value = ""; // 重置以便重复选择同一文件
+                  }}
+                />
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="gap-1.5"
+                  onClick={() => document.getElementById("plot-file-upload")?.click()}
+                >
+                  <Upload className="h-3.5 w-3.5" />
+                  上传 TXT / 字幕
+                </Button>
+                <span className="text-xs text-muted-foreground">
+                  {plotForm.content ? "已上传，可继续编辑" : "或直接粘贴内容"}
+                </span>
+              </div>
+            </Field>
             <Field label="剧情内容" required hint={`${plotForm.content.length} 字`}>
               <Textarea
                 value={plotForm.content}
                 onChange={(e) => setPlotForm((p) => ({ ...p, content: e.target.value }))}
                 placeholder="在此粘贴或输入真实剧情描述，建议 500 字以上，包含主要人物、关键情节、结局走向…"
-                className="min-h-[240px] resize-y scrollbar-thin"
+                className="h-[240px] resize-none scrollbar-thin overflow-y-auto"
               />
             </Field>
           </div>
@@ -752,7 +1119,7 @@ export function ScriptGeneratorView() {
         onOpenChange={setSaveWsOpen}
         field={saveWsField}
         value={saveWsValue}
-        defaultMovieTitle={form.movieTitle.trim()}
+        defaultMovieTitle={mediaType === "tv" ? tvTitle.trim() : form.movieTitle.trim()}
         defaultGenre={form.genre}
         onSaved={() => setView("workspace")}
       />
@@ -782,6 +1149,7 @@ interface AgentPanelProps {
   selectedPlot: PlotDoc | null;
   plotExpanded: boolean;
   setPlotExpanded: (v: boolean) => void;
+  mediaType: "movie" | "tv";
 }
 
 function AgentPanel(props: AgentPanelProps) {
@@ -805,6 +1173,7 @@ function AgentPanel(props: AgentPanelProps) {
     selectedPlot,
     plotExpanded,
     setPlotExpanded,
+    mediaType,
   } = props;
 
   const hasTimeline = agentMode === "web" && steps.some((s) => s.status !== "pending");
@@ -816,36 +1185,36 @@ function AgentPanel(props: AgentPanelProps) {
   return (
     <Card
       className={cn(
-        "glass-card relative overflow-hidden p-5 transition-all",
-        isRunning && "ring-1 ring-green-500/40 shadow-glow-primary"
+        "glass-card flex h-full flex-col overflow-hidden p-5 transition-all",
+        isRunning && "ring-1 ring-primary/40 shadow-glow-primary"
       )}
     >
       {isRunning && (
         <div className="pointer-events-none absolute top-0 left-0 right-0 h-px animate-pulse bg-gradient-to-r from-transparent via-primary to-transparent" />
       )}
-      <div className="mb-4 flex items-center gap-2">
+      <div className="mb-5 flex items-center gap-2 shrink-0">
         <div
           className={cn(
             "flex h-9 w-9 items-center justify-center rounded-lg transition-colors",
-            isRunning ? "bg-green-500/15 text-green-600 dark:text-green-400" : "bg-muted/50 text-muted-foreground"
+            isRunning ? "bg-primary/15 text-primary" : "bg-muted/50 text-muted-foreground"
           )}
         >
           <Bot className="h-5 w-5" />
         </div>
         <div>
-          <h2 className="font-semibold">🤖 Agent 协作</h2>
+          <h2 className="font-semibold">Agent 协作</h2>
           <p className="text-xs text-muted-foreground">
             {isRunning ? "正在执行任务…" : "选择剧情来源，让 AI 基于真实剧情创作"}
           </p>
         </div>
       </div>
 
-      <div className="space-y-4">
+      <div className="flex-1 space-y-4 overflow-y-auto p-px">
         <SourceSelector
           value={agentMode}
           onChange={setAgentMode}
-          isLoggedIn={isLoggedIn}
           disabled={isRunning}
+          mediaType={mediaType}
         />
 
         <AnimatePresence>
@@ -894,7 +1263,7 @@ function AgentPanel(props: AgentPanelProps) {
               <SectionTitle icon={<ExternalLink className="h-3.5 w-3.5" />}>
                 剧情来源（{displaySources.length}）
                 {liveStage && liveStage.stage === "read" && (
-                  <span className="ml-2 inline-flex items-center gap-1 text-[10px] text-green-600 dark:text-green-400">
+                  <span className="ml-2 inline-flex items-center gap-1 text-[10px] text-primary">
                     <Loader2 className="h-3 w-3 animate-spin" />
                     深度读取中…
                   </span>
@@ -912,7 +1281,7 @@ function AgentPanel(props: AgentPanelProps) {
 function SectionTitle({ icon, children }: { icon: React.ReactNode; children: React.ReactNode }) {
   return (
     <div className="mb-2 flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
-      <span className="text-green-600 dark:text-green-400">{icon}</span>
+      <span className="text-primary">{icon}</span>
       {children}
     </div>
   );
@@ -929,33 +1298,28 @@ interface SourceOption {
 function SourceSelector({
   value,
   onChange,
-  isLoggedIn,
   disabled,
+  mediaType,
 }: {
   value: AgentMode;
   onChange: (v: AgentMode) => void;
-  isLoggedIn: boolean;
   disabled: boolean;
+  mediaType: "movie" | "tv";
 }) {
   const options: SourceOption[] = [
-    {
-      id: "none",
-      icon: <Wand2 className="h-4 w-4" />,
-      label: "不使用 Agent",
-      desc: "直接生成，文案末尾会标注「剧情未经校验」",
-    },
     {
       id: "web",
       icon: <Globe className="h-4 w-4" />,
       label: "联网搜索真实剧情",
-      desc: "Agent 自动联网抓取 + 深度阅读，约 5-15 秒",
+      desc: mediaType === "tv" ? "电视剧分集数据需上传剧情文档" : "Agent 自动联网抓取 + 深度阅读，约 5-15 秒",
+      locked: mediaType === "tv",
     },
     {
       id: "doc",
       icon: <FileText className="h-4 w-4" />,
       label: "使用剧情文档",
-      desc: isLoggedIn ? "从你的剧情文档库选取已存的真实剧情" : "登录后可用",
-      locked: !isLoggedIn,
+      desc: "从你的剧情文档库选取已存或上传剧情文档",
+      locked: false,
     },
   ];
   return (
@@ -972,15 +1336,15 @@ function SourceSelector({
             className={cn(
               "flex w-full items-start gap-3 rounded-lg border p-3 text-left transition-all",
               active
-                ? "border-green-500 bg-green-500/5 shadow-glow-primary"
-                : "border-border/60 hover:border-green-500/40 hover:bg-muted/30",
+                ? "border-primary bg-primary/5 shadow-glow-primary"
+                : "border-border/60 hover:border-primary/40 hover:bg-muted/30",
               isDisabled && "cursor-not-allowed opacity-60"
             )}
           >
             <div
               className={cn(
                 "mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-md",
-                active ? "bg-green-500/15 text-green-600 dark:text-green-400" : "bg-muted/50 text-muted-foreground"
+                active ? "bg-primary/15 text-primary" : "bg-muted/50 text-muted-foreground"
               )}
             >
               {opt.icon}
@@ -988,12 +1352,12 @@ function SourceSelector({
             <div className="min-w-0 flex-1">
               <div className="flex items-center gap-2">
                 <span className="text-sm font-medium">{opt.label}</span>
-                {opt.locked && (
-                  <Badge variant="outline" className="h-4 px-1.5 text-[10px]">
-                    需登录
+                {active && !opt.locked && <CheckCircle2 className="ml-auto h-4 w-4 text-primary" />}
+                {opt.id === "web" && mediaType === "tv" && (
+                  <Badge variant="outline" className="h-4 px-1.5 text-[10px] border-amber-500/50 text-amber-600">
+                    电视剧不可用
                   </Badge>
                 )}
-                {active && !opt.locked && <CheckCircle2 className="ml-auto h-4 w-4 text-green-600 dark:text-green-400" />}
               </div>
               <p className="mt-0.5 text-[11px] leading-tight text-muted-foreground">{opt.desc}</p>
             </div>
@@ -1059,7 +1423,7 @@ function AgentTimeline({
               </p>
             )}
             {step.status === "running" && (
-              <p className="mt-0.5 text-[11px] text-green-600 dark:text-green-400/70">处理中…</p>
+              <p className="mt-0.5 text-[11px] text-primary/70">处理中…</p>
             )}
             {step.status === "error" && (
               <Button
@@ -1082,7 +1446,7 @@ function AgentTimeline({
 function StepIcon({ status, icon }: { status: StepStatus; icon: React.ReactNode }) {
   if (status === "running") {
     return (
-      <div className="flex h-7 w-7 items-center justify-center rounded-full bg-green-500/15 text-green-600 dark:text-green-400 ring-2 ring-green-500/30">
+      <div className="flex h-7 w-7 items-center justify-center rounded-full bg-primary/15 text-primary ring-2 ring-primary/30">
         <Loader2 className="h-3.5 w-3.5 animate-spin" />
       </div>
     );
@@ -1171,8 +1535,8 @@ function PlotLibrary({
                 className={cn(
                   "group relative cursor-pointer rounded-lg border p-2.5 transition-all",
                   active
-                    ? "border-green-500 bg-green-500/5 shadow-glow-primary"
-                    : "border-border/60 hover:border-green-500/40 hover:bg-muted/30"
+                    ? "border-primary bg-primary/5 shadow-glow-primary"
+                    : "border-border/60 hover:border-primary/40 hover:bg-muted/30"
                 )}
                 onClick={() => onSelect(active ? null : p.id)}
               >
@@ -1182,7 +1546,7 @@ function PlotLibrary({
                     variant="outline"
                     className={cn(
                       "h-4 px-1.5 text-[10px]",
-                      p.source === "web" ? "border-green-500/30 text-green-600 dark:text-green-400" : "border-accent/30 text-accent"
+                      p.source === "web" ? "border-primary/30 text-primary" : "border-accent/30 text-accent"
                     )}
                   >
                     {p.source === "web" ? "联网" : "手动"}
@@ -1213,11 +1577,11 @@ function PlotLibrary({
       {selectedPlot && (
         <div className="rounded-lg border border-border/60 bg-card/40 p-3">
           <div className="mb-1.5 flex items-center justify-between">
-            <span className="text-xs font-medium text-green-600 dark:text-green-400">已选剧情预览</span>
+            <span className="text-xs font-medium text-primary">已选剧情预览</span>
             <button
               type="button"
               onClick={() => setExpanded(!expanded)}
-              className="text-[10px] text-muted-foreground hover:text-green-600 dark:text-green-400"
+              className="text-[10px] text-muted-foreground hover:text-primary"
             >
               {expanded ? "收起" : "展开全文"}
             </button>
@@ -1245,10 +1609,10 @@ function SearchSources({ sources }: { sources: SearchSource[] }) {
           href={s.url}
           target="_blank"
           rel="noopener noreferrer"
-          className="block rounded-md border border-border/60 p-2 transition-all hover:border-green-500/40 hover:bg-muted/30"
+          className="block rounded-md border border-border/60 p-2 transition-all hover:border-primary/40 hover:bg-muted/30"
         >
           <div className="flex items-center gap-1.5">
-            <Globe className="h-3 w-3 shrink-0 text-green-600 dark:text-green-400" />
+            <Globe className="h-3 w-3 shrink-0 text-primary" />
             <span className="truncate text-xs font-medium">{s.name}</span>
             <span className="shrink-0 text-[10px] text-muted-foreground">{s.host}</span>
             <ExternalLink className="ml-auto h-3 w-3 shrink-0 text-muted-foreground" />
@@ -1298,7 +1662,7 @@ function Field({
       <div className="flex items-baseline justify-between">
         <Label className="text-xs font-medium text-foreground/80">
           {label}
-          {required && <span className="ml-0.5 text-green-600 dark:text-green-400">*</span>}
+          {required && <span className="ml-0.5 text-primary">*</span>}
         </Label>
         {hint && <span className="text-[10px] text-muted-foreground">{hint}</span>}
       </div>
@@ -1336,79 +1700,95 @@ function SelectField({
 
 function EmptyState({ onPick }: { onPick: (title: string, genre: string) => void }) {
   return (
-    <div className="flex flex-1 flex-col items-center justify-center p-8 text-center">
+    <div className="flex h-full flex-col overflow-y-auto">
+      {/* 统一的头部 */}
+      <div className="mb-5 flex items-center gap-2 shrink-0">
+        <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary/10 text-primary">
+          <Film className="h-5 w-5" />
+        </div>
+        <div>
+          <h2 className="font-semibold">文案预览</h2>
+          <p className="text-xs text-muted-foreground">生成后在此预览完整文案</p>
+        </div>
+      </div>
+
+      {/* 空状态内容 */}
       <motion.div
         initial={{ opacity: 0, scale: 0.9 }}
         animate={{ opacity: 1, scale: 1 }}
         transition={{ duration: 0.4 }}
-        className="mb-5 flex h-20 w-20 items-center justify-center rounded-2xl bg-gradient-to-br from-green-500/20 to-blue-500/20"
+        className="flex flex-1 flex-col items-center justify-center text-center"
       >
-        <Film className="h-10 w-10 text-green-600 dark:text-green-400" />
+        <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-muted/50">
+          <ScrollText className="h-8 w-8 text-muted-foreground" />
+        </div>
+        <h3 className="text-base font-semibold">还没有生成文案</h3>
+        <p className="mt-2 max-w-xs text-xs leading-relaxed text-muted-foreground">
+          填写左侧电影信息与创作参数，选择中栏的 Agent 协作模式，点击「生成独家精选文案」即可。
+        </p>
+        <div className="mt-6 flex flex-wrap items-center justify-center gap-2">
+          {SAMPLE_MOVIES.map((m) => (
+            <button
+              key={m.title}
+              onClick={() => onPick(m.title, m.genre)}
+              className="group inline-flex items-center gap-1.5 rounded-full border border-border/60 bg-card/60 px-3.5 py-1.5 text-xs font-medium transition-all hover:border-primary/40 hover:bg-primary/5 hover:text-primary"
+            >
+              <Star className="h-3 w-3 text-accent" />
+              {m.title}
+            </button>
+          ))}
+        </div>
+        <div className="mt-6 grid w-full max-w-xs grid-cols-3 gap-3">
+          {[
+            { icon: Lightbulb, label: "黄金3秒开头" },
+            { icon: Wand2, label: "高密度反转" },
+            { icon: Sparkles, label: "互动金句结尾" },
+          ].map((f) => (
+            <div key={f.label} className="rounded-lg border border-border/40 bg-muted/30 p-3">
+              <f.icon className="mx-auto mb-1.5 h-4 w-4 text-primary" />
+              <p className="text-[10px] leading-tight text-muted-foreground">{f.label}</p>
+            </div>
+          ))}
+        </div>
       </motion.div>
-      <h3 className="text-lg font-semibold">还没有生成文案</h3>
-      <p className="mt-2 max-w-sm text-sm leading-relaxed text-muted-foreground">
-        填写左侧电影信息与创作参数，选择中栏的 Agent 协作模式，点击「生成独家精选文案」即可。
-      </p>
-      <div className="mt-6 flex flex-wrap items-center justify-center gap-2">
-        {SAMPLE_MOVIES.map((m) => (
-          <button
-            key={m.title}
-            onClick={() => onPick(m.title, m.genre)}
-            className="group inline-flex items-center gap-1.5 rounded-full border border-border/60 bg-card/60 px-3.5 py-1.5 text-xs font-medium transition-all hover:border-green-500/40 hover:bg-green-500/5 hover:text-green-600 dark:text-green-400"
-          >
-            <Star className="h-3 w-3 text-accent" />
-            {m.title}
-          </button>
-        ))}
-      </div>
-      <div className="mt-8 grid w-full max-w-md grid-cols-3 gap-3">
-        {[
-          { icon: Lightbulb, label: "黄金3秒开头" },
-          { icon: Wand2, label: "高密度反转" },
-          { icon: Sparkles, label: "互动金句结尾" },
-        ].map((f) => (
-          <div key={f.label} className="rounded-lg border border-border/40 bg-muted/30 p-3">
-            <f.icon className="mx-auto mb-1.5 h-4 w-4 text-green-600 dark:text-green-400" />
-            <p className="text-[10px] leading-tight text-muted-foreground">{f.label}</p>
-          </div>
-        ))}
-      </div>
     </div>
   );
 }
 
 function ResultSkeleton() {
   return (
-    <div className="flex-1 p-6">
-      <div className="mb-4 flex items-center gap-2 text-sm text-muted-foreground">
-        <Loader2 className="h-4 w-4 animate-spin text-green-600 dark:text-green-400" />
-        AI 正在精心创作，请稍候…
+    <div className="flex h-full flex-col">
+      {/* 统一的头部 */}
+      <div className="mb-5 flex items-center gap-2 shrink-0">
+        <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary/10 text-primary">
+          <Film className="h-5 w-5" />
+        </div>
+        <div>
+          <h2 className="font-semibold">文案预览</h2>
+          <p className="text-xs text-muted-foreground">生成后在此预览完整文案</p>
+        </div>
       </div>
-      <div className="relative space-y-4 overflow-hidden">
-        <Skeleton className="relative h-7 w-2/5 overflow-hidden">
-          <div className="absolute inset-0 animate-shimmer" />
-        </Skeleton>
-        <Skeleton className="relative h-4 w-full overflow-hidden">
-          <div className="absolute inset-0 animate-shimmer" />
-        </Skeleton>
-        <Skeleton className="relative h-4 w-11/12 overflow-hidden">
-          <div className="absolute inset-0 animate-shimmer" />
-        </Skeleton>
-        <Skeleton className="relative h-4 w-full overflow-hidden">
-          <div className="absolute inset-0 animate-shimmer" />
-        </Skeleton>
-        <Skeleton className="relative h-7 w-1/3 overflow-hidden">
-          <div className="absolute inset-0 animate-shimmer" />
-        </Skeleton>
-        <Skeleton className="relative h-4 w-full overflow-hidden">
-          <div className="absolute inset-0 animate-shimmer" />
-        </Skeleton>
-        <Skeleton className="relative h-4 w-10/12 overflow-hidden">
-          <div className="absolute inset-0 animate-shimmer" />
-        </Skeleton>
-        <Skeleton className="relative h-4 w-full overflow-hidden">
-          <div className="absolute inset-0 animate-shimmer" />
-        </Skeleton>
+
+      {/* 加载状态 */}
+      <div className="flex flex-1 flex-col items-center justify-center">
+        <div className="mb-4 flex items-center gap-2 text-sm text-muted-foreground">
+          <Loader2 className="h-4 w-4 animate-spin text-primary" />
+          AI 正在精心创作，请稍候…
+        </div>
+        <div className="relative w-full space-y-4 overflow-hidden">
+          <Skeleton className="relative h-7 w-2/5 overflow-hidden">
+            <div className="absolute inset-0 animate-shimmer" />
+          </Skeleton>
+          <Skeleton className="relative h-4 w-full overflow-hidden">
+            <div className="absolute inset-0 animate-shimmer" />
+          </Skeleton>
+          <Skeleton className="relative h-4 w-11/12 overflow-hidden">
+            <div className="absolute inset-0 animate-shimmer" />
+          </Skeleton>
+          <Skeleton className="relative h-4 w-full overflow-hidden">
+            <div className="absolute inset-0 animate-shimmer" />
+          </Skeleton>
+        </div>
       </div>
     </div>
   );
@@ -1416,170 +1796,233 @@ function ResultSkeleton() {
 
 function AgentRunningSkeleton() {
   return (
-    <div className="flex flex-1 flex-col items-center justify-center p-8 text-center">
-      <div className="relative mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-green-500/10">
-        <Bot className="h-8 w-8 text-green-600 dark:text-green-400" />
-        <span className="absolute -right-1 -top-1 flex h-3 w-3">
-          <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-green-500 opacity-75" />
-          <span className="relative inline-flex h-3 w-3 rounded-full bg-green-500" />
-        </span>
+    <div className="flex h-full flex-col">
+      {/* 统一的头部 */}
+      <div className="mb-5 flex items-center gap-2 shrink-0">
+        <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary/10 text-primary">
+          <Film className="h-5 w-5" />
+        </div>
+        <div>
+          <h2 className="font-semibold">文案预览</h2>
+          <p className="text-xs text-muted-foreground">生成后在此预览完整文案</p>
+        </div>
       </div>
-      <h3 className="text-sm font-semibold">Agent 正在协作创作</h3>
-      <p className="mt-1 max-w-xs text-xs leading-relaxed text-muted-foreground">
-        请查看中栏 Agent 面板的实时执行进度，搜索 + 阅读 + 整合 + 生成四步流程即将完成…
-      </p>
+
+      {/* 加载状态 */}
+      <div className="flex flex-1 flex-col items-center justify-center">
+        <div className="relative mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-primary/10">
+          <Bot className="h-8 w-8 text-primary" />
+          <span className="absolute -right-1 -top-1 flex h-3 w-3">
+            <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-primary opacity-75" />
+            <span className="relative inline-flex h-3 w-3 rounded-full bg-primary" />
+          </span>
+        </div>
+        <h3 className="text-sm font-semibold">Agent 正在协作创作</h3>
+        <p className="mt-1 max-w-xs text-xs leading-relaxed text-muted-foreground">
+          请查看中栏 Agent 面板的实时执行进度，搜索 + 阅读 + 整合 + 生成四步流程即将完成…
+        </p>
+      </div>
     </div>
   );
 }
 
 interface ResultPanelProps {
   result: string;
-  isFav: boolean;
-  savedId: string | null;
-  ttsLoading: boolean;
-  audioUrl: string | null;
-  isLoggedIn: boolean;
+  resultStats: { chars: number; words: number; sentences: number; paragraphs: number; readingTime: number } | null;
   onCopy: () => void;
-  onFavorite: () => void;
   onRegenerate: () => void;
-  onTTS: () => void;
-  onSaveToWorkspace: (field: WorkspaceField, value: string) => void;
+  onReset: () => void;
+  onGoToVoice: (script: string) => void;
+  selectionPopup: {
+    visible: boolean;
+    x: number;
+    y: number;
+    selectedText: string;
+    context: string;
+  };
+  adjustingText: string | null;
+  adjustPrompt: string;
+  adjustLoading: boolean;
+  onAdjustText: (text: string) => void;
+  onSetAdjustingText: (text: string | null) => void;
+  onSetAdjustPrompt: (prompt: string) => void;
+  onSetSelectionPopup: (popup: { visible: boolean; x: number; y: number; selectedText: string; context: string }) => void;
 }
 
-type ResultViewMode = "script" | "storyboard";
-
 function ResultPanel({
-  result,
-  isFav,
-  savedId,
-  ttsLoading,
-  audioUrl,
-  isLoggedIn,
-  onCopy,
-  onFavorite,
-  onRegenerate,
-  onTTS,
-  onSaveToWorkspace,
-}: ResultPanelProps) {
-  const isUnverified = result.includes("剧情未经校验");
-  const [viewMode, setViewMode] = React.useState<ResultViewMode>("script");
+	  result,
+	  resultStats,
+	  onCopy,
+	  onRegenerate,
+	  onReset,
+	  onGoToVoice,
+	  selectionPopup,
+	  adjustingText,
+	  adjustPrompt,
+	  adjustLoading,
+	  onAdjustText,
+	  onSetAdjustingText,
+	  onSetAdjustPrompt,
+	  onSetSelectionPopup,
+	}: ResultPanelProps) {
+	  const isUnverified = result.includes("剧情未经校验");
   return (
-    <div className="flex flex-1 flex-col">
-      {/* 工具栏 */}
-      <div className="flex flex-wrap items-center gap-2 border-b border-border/60 bg-card/40 p-3">
-        <div className="mr-auto flex items-center gap-1.5 text-xs font-medium text-emerald-600 dark:text-emerald-400">
-          <CheckCircle2 className="h-3.5 w-3.5" />
-          创作完成
+    <div className="flex h-full flex-col overflow-hidden">
+      {/* 统一的头部 */}
+      <div className="mb-5 flex items-center gap-2 border-b border-border/60 pb-4 shrink-0">
+        <div className="flex items-center gap-3">
+          <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary/10 text-primary">
+            <Film className="h-5 w-5" />
+          </div>
+          <div>
+            <h2 className="font-semibold">文案预览</h2>
+            <p className="text-xs text-muted-foreground">生成后在此预览完整文案</p>
+          </div>
         </div>
-        {/* 视图切换 */}
-        <div className="flex items-center rounded-lg border border-border/60 bg-background/60 p-0.5">
-          <Button
-            size="sm"
-            variant={viewMode === "script" ? "secondary" : "ghost"}
-            className={cn("h-7 gap-1.5 px-2.5 text-xs", viewMode === "script" && "shadow-sm")}
-            onClick={() => setViewMode("script")}
-          >
-            <ScrollText className="h-3.5 w-3.5" />
-            文案
-          </Button>
-          <Button
-            size="sm"
-            variant={viewMode === "storyboard" ? "secondary" : "ghost"}
-            className={cn("h-7 gap-1.5 px-2.5 text-xs", viewMode === "storyboard" && "shadow-sm")}
-            onClick={() => setViewMode("storyboard")}
-          >
-            <Clapperboard className="h-3.5 w-3.5" />
-            分镜表
-          </Button>
-        </div>
-        <Button
-          size="sm"
-          variant="ghost"
-          className="h-8 gap-1.5 px-2.5 text-green-600 dark:text-green-400 hover:bg-green-500/10 hover:text-green-600 dark:text-green-400"
-          onClick={() =>
-            onSaveToWorkspace(
-              viewMode === "storyboard" ? "storyboard" : "script",
-              viewMode === "storyboard" ? exportStoryboardMarkdown(result) : result
-            )
-          }
-          title="存入创作工作台，统一管理每部电影的创作进度"
-        >
-          <FolderKanban className="h-3.5 w-3.5" />
-          <span className="hidden sm:inline">存入工作台</span>
-        </Button>
-        <Button size="sm" variant="ghost" className="h-8 gap-1.5 px-2.5" onClick={onCopy}>
-          <Copy className="h-3.5 w-3.5" />
-          <span className="hidden sm:inline">复制</span>
-        </Button>
-        <Button
-          size="sm"
-          variant="ghost"
-          className={cn("h-8 gap-1.5 px-2.5", isFav && "text-green-600 dark:text-green-400")}
-          onClick={onFavorite}
-          disabled={!savedId && isLoggedIn}
-          title={isLoggedIn ? (isFav ? "取消收藏" : "收藏") : "登录后可收藏"}
-        >
-          <Heart className={cn("h-3.5 w-3.5", isFav && "fill-primary")} />
-          <span className="hidden sm:inline">{isFav ? "已收藏" : "收藏"}</span>
-        </Button>
-        <Button size="sm" variant="ghost" className="h-8 gap-1.5 px-2.5" onClick={onTTS} disabled={ttsLoading}>
-          {ttsLoading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Volume2 className="h-3.5 w-3.5" />}
-          <span className="hidden sm:inline">{ttsLoading ? "合成中" : "试听"}</span>
-        </Button>
-        <Button size="sm" variant="ghost" className="h-8 gap-1.5 px-2.5" onClick={onRegenerate}>
-          <RefreshCw className="h-3.5 w-3.5" />
-          <span className="hidden sm:inline">重生成</span>
-        </Button>
-      </div>
+{/* 右侧操作按钮 */}
+	        <div className="ml-auto flex items-center gap-1">
+	          <Button size="sm" variant="ghost" className="h-8 gap-1.5 px-2" onClick={onCopy} title="复制">
+	            <Copy className="h-4 w-4" />
+	          </Button>
+	          <Button size="sm" variant="ghost" className="h-8 gap-1.5 px-2" onClick={onRegenerate} title="重生成">
+	            <RefreshCw className="h-4 w-4" />
+	          </Button>
+	          <Button size="sm" variant="ghost" className="h-8 gap-1.5 px-2" onClick={onReset} title="重置">
+	            <RotateCcw className="h-4 w-4" />
+	          </Button>
+	          <Button size="sm" className="h-8 gap-1.5 px-2 bg-gradient-to-r from-primary to-accent hover:opacity-90" onClick={() => onGoToVoice(result)} title="语音试听">
+	            <Volume2 className="h-4 w-4" />
+	          </Button>
+	        </div>
+	      </div>
+	      
+	      {/* 文案统计 */}
+	      {resultStats && (
+	        <div className="mb-4 flex flex-wrap items-center gap-4 rounded-lg bg-muted/40 px-4 py-2 text-xs">
+	          <div className="flex items-center gap-1.5">
+	            <span className="text-muted-foreground">字数</span>
+	            <span className="font-semibold text-primary">{resultStats.chars.toLocaleString()}</span>
+	          </div>
+	          <div className="flex items-center gap-1.5">
+	            <span className="text-muted-foreground">句数</span>
+	            <span className="font-semibold text-primary">{resultStats.sentences}</span>
+	          </div>
+	          <div className="flex items-center gap-1.5">
+	            <span className="text-muted-foreground">段落</span>
+	            <span className="font-semibold text-primary">{resultStats.paragraphs}</span>
+	          </div>
+	          <div className="flex items-center gap-1.5">
+	            <span className="text-muted-foreground">预估朗读</span>
+	            <span className="font-semibold text-primary">{resultStats.readingTime}分钟</span>
+	          </div>
+	        </div>
+	      )}
 
       {/* 黄色未校验提示 */}
       {isUnverified && (
-        <div className="flex items-start gap-2 border-b border-amber-500/20 bg-amber-500/10 p-3 text-amber-700 dark:text-amber-300">
+        <div className="mb-3 flex items-start gap-2 rounded-md bg-amber-500/10 p-2 text-amber-700 dark:text-amber-300">
           <AlertCircle className="mt-0.5 h-3.5 w-3.5 shrink-0" />
           <p className="text-[11px] leading-relaxed">
-            本文案未使用 Agent 协作，剧情部分由 AI 自行发挥，<strong>可能存在虚构</strong>。建议切到「联网搜索真实剧情」或「使用剧情文档」模式重新生成，确保剧情与真实画面一致。
+            本文案未使用 Agent 协作，剧情部分由 AI 自行发挥，<strong>可能存在虚构</strong>。
           </p>
         </div>
       )}
 
-      {/* 试听播放器 */}
-      {audioUrl && (
-        <div className="border-b border-border/60 bg-green-500/5 p-3">
-          <div className="mb-1.5 flex items-center gap-1.5 text-xs font-medium text-green-600 dark:text-green-400">
-            <Volume2 className="h-3.5 w-3.5" />
-            语音试听（前800字）
-          </div>
-          <audio src={audioUrl} controls className="w-full" />
+      {/* 内容区 */}
+      <div
+        className="scrollbar-thin min-h-0 flex-1 overflow-y-auto"
+        onMouseUp={() => {
+          setTimeout(() => {
+            const selection = window.getSelection();
+            const selectedText = selection?.toString().trim() || "";
+            if (selectedText && selectedText.length > 2) {
+              const range = selection?.getRangeAt(0);
+              if (range) {
+                const rect = range.getBoundingClientRect();
+                onSetSelectionPopup({
+                  visible: true,
+                  x: rect.left + rect.width / 2,
+                  y: rect.top - 10,
+                  selectedText,
+                  context: result || "",
+                });
+                onSetAdjustingText(selectedText);
+                onSetAdjustPrompt("");
+              }
+            } else {
+              onSetSelectionPopup({ ...selectionPopup, visible: false });
+              onSetAdjustingText(null);
+            }
+          }, 10);
+        }}
+      >
+        <div className="rounded-xl border-l-2 border-primary bg-card/40 p-5">
+          <Markdown content={result} />
+        </div>
+      </div>
+
+      {/* 选中文本调整浮层 — 自适应上下位置 */}
+      {selectionPopup.visible && (
+        <div
+          className="fixed z-50"
+          style={{
+            left: `${Math.min(selectionPopup.x, window.innerWidth - 320)}px`,
+            top: `${selectionPopup.y < 260 ? selectionPopup.y + 15 : selectionPopup.y - 10}px`,
+            transform: selectionPopup.y < 260 ? "translate(-50%, 0%)" : "translate(-50%, -100%)",
+          }}
+        >
+          <Card className="w-80 border-2 border-primary/40 bg-background p-4 shadow-2xl shadow-primary/20">
+            <div className="mb-2 flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <div className="flex h-6 w-6 items-center justify-center rounded-md bg-primary/10 text-primary">
+                  <Wand2 className="h-3.5 w-3.5" />
+                </div>
+                <span className="text-sm font-semibold">调整选中文案</span>
+              </div>
+              <span className="text-[10px] text-muted-foreground bg-muted rounded px-1.5 py-0.5">
+                {selectionPopup.selectedText.length}字
+              </span>
+            </div>
+            <div className="mb-3 rounded-lg border border-primary/20 bg-primary/5 px-3 py-2 text-xs leading-relaxed text-foreground/80">
+              “{selectionPopup.selectedText.slice(0, 80)}{selectionPopup.selectedText.length > 80 ? "…" : ""}”
+            </div>
+            <Textarea
+              value={adjustPrompt}
+              onChange={(e) => onSetAdjustPrompt(e.target.value)}
+              placeholder="例如：让这段更有悬念、换个更口语化的表达..."
+              className="mb-3 min-h-[70px] resize-none text-sm border-primary/30 bg-muted/40 focus:border-primary focus:ring-2 focus:ring-primary/20"
+              autoFocus
+            />
+            <div className="flex gap-2">
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => {
+                  onSetAdjustingText(null);
+                  onSetAdjustPrompt("");
+                  onSetSelectionPopup({ ...selectionPopup, visible: false });
+                }}
+                className="flex-1"
+              >
+                取消
+              </Button>
+              <Button
+                size="sm"
+                onClick={() => onAdjustText(selectionPopup.selectedText)}
+                disabled={adjustLoading || !adjustPrompt.trim()}
+                className="flex-1 gap-1 bg-gradient-to-r from-primary to-accent text-primary-foreground"
+              >
+                {adjustLoading ? (
+                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                ) : (
+                  <Sparkles className="h-3.5 w-3.5" />
+                )}
+                应用
+              </Button>
+            </div>
+          </Card>
         </div>
       )}
-
-      {/* 内容区：文案 / 分镜表 切换 */}
-      <div className="scrollbar-thin flex-1 overflow-y-auto p-5 sm:p-6">
-        <AnimatePresence mode="wait">
-          {viewMode === "script" ? (
-            <motion.div
-              key="script"
-              initial={{ opacity: 0, y: 8 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -8 }}
-              transition={{ duration: 0.2 }}
-              className="rounded-xl border-l-2 border-green-500 bg-card/40 p-5"
-            >
-              <Markdown content={result} />
-            </motion.div>
-          ) : (
-            <motion.div
-              key="storyboard"
-              initial={{ opacity: 0, y: 8 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -8 }}
-              transition={{ duration: 0.2 }}
-            >
-              <StoryboardTable content={result} />
-            </motion.div>
-          )}
-        </AnimatePresence>
-      </div>
     </div>
   );
 }
@@ -1691,11 +2134,11 @@ function StoryboardTable({ content }: { content: string }) {
   }
 
   return (
-    <div className="space-y-3">
+    <div className="space-y-3 min-h-0">
       {/* 概览栏 */}
       <div className="flex flex-wrap items-center gap-3 rounded-xl border border-border/60 bg-card/40 p-3">
         <div className="flex items-center gap-1.5 text-xs">
-          <ListTree className="h-3.5 w-3.5 text-green-600 dark:text-green-400" />
+          <ListTree className="h-3.5 w-3.5 text-primary" />
           <span className="text-muted-foreground">镜头</span>
           <span className="font-semibold">{shots.length}</span>
         </div>
@@ -1717,7 +2160,7 @@ function StoryboardTable({ content }: { content: string }) {
         <Button
           size="sm"
           onClick={handleExport}
-          className="ml-auto h-7 gap-1.5 rounded-full bg-gradient-to-r from-green-500 to-blue-500 px-3 text-xs text-white"
+          className="ml-auto h-7 gap-1.5 rounded-full bg-gradient-to-r from-primary to-accent px-3 text-xs text-primary-foreground"
         >
           <Download className="h-3.5 w-3.5" />
           导出分镜表
@@ -1732,11 +2175,11 @@ function StoryboardTable({ content }: { content: string }) {
             initial={{ opacity: 0, x: -8 }}
             animate={{ opacity: 1, x: 0 }}
             transition={{ duration: 0.25, delay: Math.min(i * 0.02, 0.4) }}
-            className="group flex gap-3 rounded-lg border border-border/60 bg-card/30 p-3 transition-colors hover:border-green-500/40 hover:bg-green-500/[0.03]"
+            className="group flex gap-3 rounded-lg border border-border/60 bg-card/30 p-3 transition-colors hover:border-primary/40 hover:bg-primary/[0.03]"
           >
             {/* 镜号 */}
             <div className="flex flex-col items-center">
-              <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-green-500/10 text-xs font-bold text-green-600 dark:text-green-400">
+              <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary/10 text-xs font-bold text-primary">
                 {String(shot.id).padStart(2, "0")}
               </div>
               <span className="mt-1 text-[10px] text-muted-foreground">
@@ -1771,7 +2214,7 @@ function StoryboardTable({ content }: { content: string }) {
 
 function Markdown({ content }: { content: string }) {
   return (
-    <div className="text-sm leading-relaxed text-foreground/90">
+    <div className="text-sm leading-relaxed text-foreground/90 min-h-0">
       <ReactMarkdown
         components={{
           h2: ({ children }) => (
@@ -1780,13 +2223,13 @@ function Markdown({ content }: { content: string }) {
             </h2>
           ),
           h3: ({ children }) => (
-            <h3 className="mb-2 mt-4 text-sm font-semibold text-green-600 dark:text-green-400">{children}</h3>
+            <h3 className="mb-2 mt-4 text-sm font-semibold text-primary">{children}</h3>
           ),
           p: ({ children }) => <p className="mb-3 leading-7 text-foreground/85">{children}</p>,
           ul: ({ children }) => <ul className="mb-3 ml-4 list-disc space-y-1">{children}</ul>,
           ol: ({ children }) => <ol className="mb-3 ml-4 list-decimal space-y-1">{children}</ol>,
           li: ({ children }) => <li className="leading-7 text-foreground/85">{children}</li>,
-          strong: ({ children }) => <strong className="font-semibold text-green-600 dark:text-green-400">{children}</strong>,
+          strong: ({ children }) => <strong className="font-semibold text-primary">{children}</strong>,
           blockquote: ({ children }) => (
             <blockquote className="my-3 border-l-2 border-accent pl-3 italic text-muted-foreground">
               {children}
@@ -1794,7 +2237,7 @@ function Markdown({ content }: { content: string }) {
           ),
           hr: () => <hr className="my-4 border-border/50" />,
           code: ({ children }) => (
-            <code className="rounded bg-muted px-1.5 py-0.5 text-xs text-green-600 dark:text-green-400">{children}</code>
+            <code className="rounded bg-muted px-1.5 py-0.5 text-xs text-primary">{children}</code>
           ),
         }}
       >

@@ -405,7 +405,7 @@ export function QQGroupButton({
 /**
  * 加群对话框内容，复用于 FAB 与按钮触发两种场景。
  */
-function QQGroupDialogContent() {
+export function QQGroupDialogContent() {
   const [copied, setCopied] = React.useState(false);
   const [hasQR, setHasQR] = React.useState(true);
 

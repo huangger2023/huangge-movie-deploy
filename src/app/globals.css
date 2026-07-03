@@ -65,7 +65,7 @@
   --accent-foreground: #2A1810;
   --destructive: #DC143C;
   --border: #7A4A24;
-  --input: #F0DDB4;
+  --input: #7A4A24;
   --ring: #8B4513;
   /* Chart pixel colors */
   --chart-1: #6B8E23;
@@ -104,7 +104,7 @@
   --accent-foreground: #2A1810;
   --destructive: #FF4444;
   --border: #9A6B40;
-  --input: #3D2817;
+  --input: #9A6B40;
   --ring: #D4A76A;
   /* Chart pixel colors (dark) */
   --chart-1: #9BC03A;
@@ -150,7 +150,7 @@ h1, h2, h3, h4, h5, h6 {
   font-family: 'Press Start 2P', 'VT323', monospace;
   letter-spacing: 0.5px;
 }
-h1 { font-size: 20px; }
+h1 { font-size: 28px; }
 h2 { font-size: 16px; }
 h3 { font-size: 14px; }
 h4 { font-size: 12px; }
@@ -259,6 +259,7 @@ h6 { font-size: 10px; }
     background-clip: text !important;
     -webkit-text-fill-color: transparent !important;
     color: transparent !important;
+    padding-bottom: 0.15em !important;
   }
   .text-gradient-gold {
     background: linear-gradient(135deg, #F97316 0%, #EAB308 100%) !important;

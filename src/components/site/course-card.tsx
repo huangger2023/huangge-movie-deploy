@@ -48,10 +48,10 @@ export function CourseCard({ course }: { course: CourseItem }) {
   return (
     <Card
       onClick={() => openCourse(course.id)}
-      className="group relative cursor-pointer overflow-hidden p-0 transition-all duration-300 hover:-translate-y-1 hover:shadow-glow-primary"
+      className="group relative flex h-full cursor-pointer flex-col overflow-hidden p-0 transition-all duration-300 hover:-translate-y-1 hover:shadow-glow-primary"
     >
       {/* Cover */}
-      <div className="relative aspect-[4/3] w-full overflow-hidden">
+      <div className="relative aspect-[4/3] w-full shrink-0 overflow-hidden">
         { }
         <img
           src={course.coverImage}
@@ -107,7 +107,7 @@ export function CourseCard({ course }: { course: CourseItem }) {
       </div>
 
       {/* Body */}
-      <div className="space-y-2.5 p-4">
+      <div className="flex flex-1 flex-col space-y-2.5 p-4">
         <h3 className="line-clamp-1 font-semibold leading-snug transition-colors group-hover:text-primary">
           {course.title}
         </h3>
@@ -145,7 +145,7 @@ export function CourseCard({ course }: { course: CourseItem }) {
         </div>
 
         {/* Instructor + Price */}
-        <div className="flex items-center justify-between border-t border-border/60 pt-3">
+        <div className="mt-auto flex items-center justify-between border-t border-border/60 pt-3">
           <span className="truncate text-xs text-muted-foreground">
             {course.instructor}
           </span>

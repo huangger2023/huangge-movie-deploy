@@ -378,7 +378,7 @@ export function ToolsView() {
       <div className="pointer-events-none absolute inset-0 bg-cinema-radial" />
       <div className="pointer-events-none absolute inset-0 bg-grid-faint opacity-30" />
 
-      <div className="relative mx-auto max-w-7xl px-4 py-10 sm:px-6 sm:py-14 lg:px-8">
+      <div className="relative mx-auto min-h-screen max-w-7xl px-4 py-10 sm:px-6 sm:py-14 lg:px-8">
         {/* Header */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
@@ -423,7 +423,7 @@ export function ToolsView() {
                     }
                   }}
                   className={cn(
-                    "group h-full cursor-pointer p-5 outline-none transition-all duration-300 hover:-translate-y-1 hover:shadow-glow-primary focus-visible:ring-2 focus-visible:ring-ring",
+                    "group flex h-full flex-col cursor-pointer p-5 pb-4 outline-none transition-all duration-300 hover:-translate-y-1 hover:shadow-glow-primary focus-visible:ring-2 focus-visible:ring-ring",
                     isActive &&
                       "ring-2 ring-primary shadow-glow-primary"
                   )}
@@ -436,13 +436,13 @@ export function ToolsView() {
                   >
                     <tool.icon className="h-5 w-5 text-white" />
                   </div>
-                  <h3 className="text-sm font-semibold">{tool.name}</h3>
-                  <p className="mt-1.5 line-clamp-2 text-xs leading-relaxed text-muted-foreground">
+                  <h3 className="min-h-[2.5rem] text-sm font-semibold leading-tight">{tool.name}</h3>
+                  <p className="mt-1.5 min-h-[2.5rem] text-xs leading-relaxed text-muted-foreground">
                     {tool.desc}
                   </p>
                   <div
                     className={cn(
-                      "mt-3 flex items-center text-xs font-medium transition-opacity",
+                      "mt-auto flex items-center text-xs font-medium transition-opacity",
                       isActive
                         ? "text-green-600 dark:text-green-400 opacity-100"
                         : "text-muted-foreground opacity-0 group-hover:opacity-100"
@@ -575,10 +575,12 @@ function ToolShell({
       transition={{ duration: 0.35 }}
       className="mt-4 grid gap-6 lg:grid-cols-5"
     >
-      <div className="lg:col-span-2 lg:sticky lg:top-20 lg:self-start">
-        {form}
+      <div className="flex flex-col lg:col-span-2 lg:min-h-[520px]">
+        <div className="flex min-h-0 flex-1 flex-col">{form}</div>
       </div>
-      <div className="min-h-0 lg:col-span-3">{result}</div>
+      <div className="flex flex-col lg:col-span-3">
+        <div className="flex min-h-0 flex-1 flex-col">{result}</div>
+      </div>
     </motion.div>
   );
 }
@@ -593,7 +595,7 @@ function ResultPlaceholder({
   desc: string;
 }) {
   return (
-    <Card className="flex h-[520px] min-h-0 flex-col items-center justify-center gap-3 overflow-hidden border-dashed p-8 text-center sm:h-[640px]">
+    <Card className="flex h-full min-h-[280px] flex-col items-center justify-center gap-3 border-dashed p-8 text-center">
       <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-muted/60">
         <Icon className="h-7 w-7 text-muted-foreground" />
       </div>
@@ -629,7 +631,7 @@ function Field({
 
 function GeneratingSkeleton({ rows = 6 }: { rows?: number }) {
   return (
-    <Card className="h-[520px] space-y-3 overflow-hidden p-5 sm:h-[640px]">
+    <Card className="flex h-full flex-col space-y-3 overflow-hidden p-5">
       {Array.from({ length: rows }).map((_, i) => (
         <div key={i} className="flex items-center gap-3">
           <Skeleton className="h-6 w-6 shrink-0 rounded-md" />
@@ -703,18 +705,18 @@ function TitleTool() {
   return (
     <ToolShell
       form={
-        <Card className="space-y-5 p-5 sm:p-6">
-          <div className="flex items-center gap-2">
-            <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-gradient-to-br from-amber-500 to-orange-500">
-              <Type className="h-4 w-4 text-white" />
-            </div>
-            <div>
-              <h2 className="text-sm font-semibold">爆款标题生成器</h2>
-              <p className="text-xs text-muted-foreground">
-                六大公式批量产出钩子标题
-              </p>
-            </div>
-          </div>
+        <Card className="flex h-full flex-col space-y-5 p-5 sm:p-6">
+	          <div className="flex items-center gap-2">
+	            <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-gradient-to-br from-amber-500 to-orange-500">
+	              <Type className="h-4 w-4 text-white" />
+	            </div>
+	            <div>
+	              <h2 className="text-sm font-semibold">爆款标题生成器</h2>
+	              <p className="text-xs text-muted-foreground">
+	                六大公式批量产出钩子标题
+	              </p>
+	            </div>
+	          </div>
 
           <Field label="电影名称">
             <div className="flex items-center gap-2 flex-nowrap">
@@ -759,7 +761,7 @@ function TitleTool() {
           <Button
             onClick={run}
             disabled={loading || agent.searching}
-            className="w-full bg-gradient-to-r from-amber-500 to-orange-500 text-white hover:opacity-90"
+            className="mt-auto w-full bg-gradient-to-r from-amber-500 to-orange-500 text-white hover:opacity-90"
           >
             {loading || agent.searching ? (
               <>
@@ -779,7 +781,7 @@ function TitleTool() {
         loading ? (
           <GeneratingSkeleton rows={count} />
         ) : output ? (
-          <Card className="flex h-[520px] min-h-0 flex-col overflow-hidden sm:h-[640px]">
+          <Card className="flex h-full flex-col overflow-hidden">
             <div className="flex shrink-0 items-center justify-between border-b border-border/60 px-5 py-3">
               <div className="flex items-center gap-2 text-sm font-medium">
                 <ListOrdered className="h-4 w-4 text-green-600 dark:text-green-400" />
@@ -888,7 +890,7 @@ function HookTool() {
   return (
     <ToolShell
       form={
-        <Card className="space-y-5 p-5 sm:p-6">
+        <Card className="flex h-full flex-col space-y-5 p-5 sm:p-6">
           <div className="flex items-center gap-2">
             <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-gradient-to-br from-fuchsia-500 to-rose-500">
               <Zap className="h-4 w-4 text-white" />
@@ -959,7 +961,7 @@ function HookTool() {
           <Button
             onClick={run}
             disabled={loading || agent.searching}
-            className="w-full bg-gradient-to-r from-fuchsia-500 to-rose-500 text-white hover:opacity-90"
+            className="mt-auto w-full bg-gradient-to-r from-fuchsia-500 to-rose-500 text-white hover:opacity-90"
           >
             {loading || agent.searching ? (
               <>
@@ -979,7 +981,7 @@ function HookTool() {
         loading ? (
           <GeneratingSkeleton rows={count} />
         ) : items.length > 0 ? (
-          <div className="flex h-[520px] min-h-0 flex-col sm:h-[680px]">
+          <div className="flex h-full flex-col">
             <div className="mb-2 flex shrink-0 items-center justify-end gap-1.5">
               <SaveToWorkspaceButton
                 field="hooks"
@@ -1064,7 +1066,7 @@ function PolishTool() {
   return (
     <ToolShell
       form={
-        <Card className="space-y-5 p-5 sm:p-6">
+        <Card className="flex h-full flex-col space-y-5 p-5 sm:p-6">
           <div className="flex items-center gap-2">
             <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-gradient-to-br from-emerald-500 to-teal-500">
               <Wand2 className="h-4 w-4 text-white" />
@@ -1117,7 +1119,7 @@ function PolishTool() {
           <Button
             onClick={run}
             disabled={loading}
-            className="w-full bg-gradient-to-r from-emerald-500 to-teal-500 text-white hover:opacity-90"
+            className="mt-auto w-full bg-gradient-to-r from-emerald-500 to-teal-500 text-white hover:opacity-90"
           >
             {loading ? (
               <>
@@ -1135,7 +1137,7 @@ function PolishTool() {
       }
       result={
         loading ? (
-          <Card className="h-[520px] space-y-3 overflow-hidden p-5 sm:h-[640px]">
+          <Card className="flex h-full flex-col space-y-3 overflow-hidden p-5">
             <Skeleton className="h-5 w-24" />
             <Skeleton className="h-4 w-full" />
             <Skeleton className="h-4 w-11/12" />
@@ -1145,7 +1147,7 @@ function PolishTool() {
             <Skeleton className="h-4 w-5/6" />
           </Card>
         ) : output ? (
-          <div className="flex h-[520px] min-h-0 flex-col sm:h-[640px]">
+          <div className="flex h-full flex-col">
             <div className="mb-2 flex shrink-0 items-center justify-end gap-1.5">
               <SaveToWorkspaceButton
                 field="script"
@@ -1208,13 +1210,124 @@ function TtsTool() {
   const [refFile, setRefFile] = React.useState<File | null>(null);
   const [loading, setLoading] = React.useState(false);
   const [audioUrl, setAudioUrl] = React.useState<string | null>(null);
+  const [previewingVoice, setPreviewingVoice] = React.useState<string | null>(null);
+  const [previewingRef, setPreviewingRef] = React.useState(false);
   const textCharCount = React.useMemo(() => text.trim().length, [text]);
+
+  const previewAudioRef = React.useRef<HTMLAudioElement | null>(null);
+  const refAudioUrlRef = React.useRef<string | null>(null);
 
   React.useEffect(() => {
     return () => {
       if (audioUrl) URL.revokeObjectURL(audioUrl);
+      if (previewAudioRef.current) {
+        previewAudioRef.current.pause();
+        previewAudioRef.current = null;
+      }
+      if (refAudioUrlRef.current) {
+        URL.revokeObjectURL(refAudioUrlRef.current);
+        refAudioUrlRef.current = null;
+      }
     };
   }, [audioUrl]);
+
+  /** 从 localStorage 读取创作工具传来的待试听文案 */
+  React.useEffect(() => {
+    const pending = localStorage.getItem("tts-pending-script");
+    if (pending) {
+      setText(pending);
+      localStorage.removeItem("tts-pending-script");
+    }
+  }, []);
+
+  /** 预览已上传的参考音频 */
+  const previewRefAudio = () => {
+    if (!refFile) return;
+    // 如果正在播放则停止
+    if (previewingRef && previewAudioRef.current) {
+      previewAudioRef.current.pause();
+      previewAudioRef.current.currentTime = 0;
+      setPreviewingRef(false);
+      return;
+    }
+    // 停止预置音色试听
+    if (previewingVoice && previewAudioRef.current) {
+      previewAudioRef.current.pause();
+      previewAudioRef.current = null;
+      setPreviewingVoice(null);
+    }
+    setPreviewingRef(true);
+    // 释放之前的 URL
+    if (refAudioUrlRef.current) {
+      URL.revokeObjectURL(refAudioUrlRef.current);
+    }
+    const url = URL.createObjectURL(refFile);
+    refAudioUrlRef.current = url;
+    const audio = new Audio(url);
+    previewAudioRef.current = audio;
+    audio.onended = () => {
+      setPreviewingRef(false);
+      previewAudioRef.current = null;
+    };
+    audio.onerror = () => {
+      setPreviewingRef(false);
+      previewAudioRef.current = null;
+      toast.error("参考音频播放失败");
+    };
+    audio.play().catch(() => {
+      setPreviewingRef(false);
+      toast.error("参考音频播放失败");
+    });
+  };
+
+  /** 试听某个预置音色：用固定短文本 + 当前语速快速合成并播放 */
+  const previewVoice = async (voiceId: string) => {
+    // 如果已经在播放该音色，则停止
+    if (previewingVoice === voiceId && previewAudioRef.current) {
+      previewAudioRef.current.pause();
+      previewAudioRef.current.currentTime = 0;
+      setPreviewingVoice(null);
+      return;
+    }
+    // 停止之前的播放
+    if (previewAudioRef.current) {
+      previewAudioRef.current.pause();
+      previewAudioRef.current = null;
+    }
+    setPreviewingVoice(voiceId);
+    try {
+      const res = await fetch("/api/ai/tts", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          mode: "preset",
+          text: "你好，欢迎收看荒哥说电影，今天为你带来一部精彩影片。",
+          presetVoice: voiceId,
+          speed,
+        }),
+      });
+      if (!res.ok) throw new Error("试听失败");
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const audio = new Audio(url);
+      previewAudioRef.current = audio;
+      audio.onended = () => {
+        URL.revokeObjectURL(url);
+        setPreviewingVoice(null);
+        previewAudioRef.current = null;
+      };
+      audio.onerror = () => {
+        URL.revokeObjectURL(url);
+        setPreviewingVoice(null);
+        previewAudioRef.current = null;
+        toast.error("试听播放失败");
+      };
+      await audio.play();
+    } catch (e) {
+      setPreviewingVoice(null);
+      toast.error(e instanceof Error ? e.message : "试听失败");
+    }
+  };
 
   const run = async () => {
     const trimmed = text.trim();
@@ -1272,7 +1385,7 @@ function TtsTool() {
   return (
     <ToolShell
       form={
-        <Card className="space-y-5 p-5 sm:p-6">
+        <Card className="flex h-full flex-col space-y-5 p-5 sm:p-6">
           <div className="flex items-center gap-2">
             <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-gradient-to-br from-rose-500 to-pink-500">
               <Mic className="h-4 w-4 text-white" />
@@ -1297,41 +1410,43 @@ function TtsTool() {
             })}
           </div>
 
-          <Field label="待合成文案" hint="不限字数">
-            <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
-              <div className="flex items-center gap-2">
-                <PasteTitleButton
-                  label="粘贴文案"
-                  onPasteText={setText}
-                  disabled={loading}
-                  className="h-8"
-                />
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  onClick={clearText}
-                  disabled={loading || !text}
-                  className="h-8 gap-1.5 rounded-[2px] px-2.5 text-xs"
-                >
-                  <Trash2 className="h-3.5 w-3.5" />
-                  <span className="hidden sm:inline">清空</span>
-                </Button>
-              </div>
-              <span className="rounded-[2px] border border-border/70 bg-background/50 px-2 py-1 font-mono text-[11px] text-muted-foreground">
-                约 {textCharCount.toLocaleString("zh-CN")} 字
-              </span>
-            </div>
-            <Textarea
-              value={text}
-              onChange={(e) => setText(e.target.value)}
-              placeholder="粘贴电影解说文案，可长可短。长文案会自动分段合成，仍导出一段完整音频…"
-              className="h-[220px] resize-none overflow-y-auto scrollbar-thin"
-            />
-            <p className="text-[11px] text-muted-foreground">
-              字数不限，长文案自动分段合成，最终拼成一段完整音频。
-            </p>
-          </Field>
+	          <Field label="待合成文案" hint="不限字数">
+	            <Card className="space-y-3 border-border/80 bg-muted/20 p-4">
+	              <div className="flex flex-wrap items-center justify-between gap-2">
+	                <div className="flex items-center gap-2">
+	                  <PasteTitleButton
+	                    label="粘贴文案"
+	                    onPasteText={setText}
+	                    disabled={loading}
+	                    className="h-8"
+	                  />
+	                  <Button
+	                    type="button"
+	                    variant="outline"
+	                    size="sm"
+	                    onClick={clearText}
+	                    disabled={loading || !text}
+	                    className="h-8 gap-1.5 rounded-[2px] px-2.5 text-xs"
+	                  >
+	                    <Trash2 className="h-3.5 w-3.5" />
+	                    <span className="hidden sm:inline">清空</span>
+	                  </Button>
+	                </div>
+	                <span className="rounded-[2px] border border-border/70 bg-background/50 px-2 py-1 font-mono text-[11px] text-muted-foreground">
+	                  约 {textCharCount.toLocaleString("zh-CN")} 字
+	                </span>
+	              </div>
+	              <Textarea
+	                value={text}
+	                onChange={(e) => setText(e.target.value)}
+	                placeholder="粘贴电影解说文案，可长可短。长文案会自动分段合成，仍导出一段完整音频…"
+	                className="h-[220px] resize-none overflow-y-auto scrollbar-thin"
+	              />
+	              <p className="text-[11px] text-muted-foreground">
+	                字数不限，长文案自动分段合成，最终拼成一段完整音频。
+	              </p>
+	            </Card>
+	          </Field>
 
           {mode === "preset" && (
             <>
@@ -1339,17 +1454,29 @@ function TtsTool() {
                 <div className="grid grid-cols-2 gap-2">
                   {MIMO_PRESET_VOICES.map((v) => {
                     const a = voice === v.id;
+                    const isPreviewing = previewingVoice === v.id;
                     return (
-                      <button key={v.id} type="button" onClick={() => setVoice(v.id)}
-                        className={cn("flex items-center gap-2 rounded-lg border p-2.5 text-left transition-all",
-                          a ? "border-green-500 bg-green-500/10 ring-1 ring-primary" : "border-border bg-muted/30 hover:border-green-500/40 hover:bg-muted/50")}>
-                        <span className="text-xl">{v.emoji}</span>
-                        <span className="min-w-0 flex-1">
-                          <span className="block truncate text-xs font-medium">{v.name}</span>
-                          <span className="block truncate text-[11px] text-muted-foreground">{v.desc}</span>
-                        </span>
-                        {a && <Check className="h-3.5 w-3.5 shrink-0 text-green-600 dark:text-green-400" />}
-                      </button>
+                      <div key={v.id} className={cn("flex items-center gap-0 rounded-lg border transition-all",
+                        a ? "border-green-500 bg-green-500/10 ring-1 ring-primary" : "border-border bg-muted/30")}>
+                        <button type="button" onClick={() => setVoice(v.id)}
+                          className="flex min-w-0 flex-1 items-center gap-2 p-2.5 text-left">
+                          <span className="text-xl">{v.emoji}</span>
+                          <span className="min-w-0 flex-1">
+                            <span className="block truncate text-xs font-medium">{v.name}</span>
+                            <span className="block truncate text-[11px] text-muted-foreground">{v.desc}</span>
+                          </span>
+                          {a && <Check className="h-3.5 w-3.5 shrink-0 text-green-600 dark:text-green-400" />}
+                        </button>
+                        <button type="button" onClick={(e) => { e.stopPropagation(); previewVoice(v.id); }}
+                          className="flex shrink-0 items-center justify-center self-stretch border-l border-border/50 px-2.5 transition-colors hover:bg-green-500/10 active:bg-green-500/20"
+                          title={isPreviewing ? "停止播放" : "试听此音色"}>
+                          {isPreviewing ? (
+                            <Loader2 className="h-3.5 w-3.5 animate-spin text-green-600 dark:text-green-400" />
+                          ) : (
+                            <Volume2 className="h-3.5 w-3.5 text-muted-foreground hover:text-foreground" />
+                          )}
+                        </button>
+                      </div>
                     );
                   })}
                 </div>
@@ -1382,40 +1509,69 @@ function TtsTool() {
 
           {mode === "clone" && (
             <Field label="参考音频" hint="≤5MB · wav/mp3/m4a/webm">
-              <label className={cn("flex cursor-pointer flex-col items-center justify-center gap-2 rounded-xl border border-dashed p-6 text-center transition-colors",
-                refFile ? "border-green-500/50 bg-green-500/5" : "border-border hover:border-green-500/40 hover:bg-muted/40")}>
-                <Upload className="h-6 w-6 text-muted-foreground" />
+              <div className={cn("rounded-xl border transition-all",
+                refFile ? "border-green-500/50" : "border-border")}>
                 {refFile ? (
-                  <div className="min-w-0">
-                    <p className="truncate text-xs font-medium">{refFile.name}</p>
-                    <p className="text-[11px] text-muted-foreground">{(refFile.size / 1024 / 1024).toFixed(2)} MB · 点击重选</p>
+                  <div className="flex items-center gap-3 p-3">
+                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-muted/50">
+                      <Volume2 className="h-5 w-5 text-muted-foreground" />
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate text-xs font-medium">{refFile.name}</p>
+                      <p className="text-[11px] text-muted-foreground">
+                        {(refFile.size / 1024 / 1024).toFixed(2)} MB
+                      </p>
+                    </div>
+                    <div className="flex items-center gap-1">
+                      <button type="button" onClick={previewRefAudio}
+                        className="flex h-8 w-8 items-center justify-center rounded-lg border border-border/60 transition-colors hover:bg-green-500/10 active:bg-green-500/20"
+                        title={previewingRef ? "停止播放" : "试听参考音频"}>
+                        {previewingRef ? (
+                          <Loader2 className="h-4 w-4 animate-spin text-green-600 dark:text-green-400" />
+                        ) : (
+                          <Volume2 className="h-4 w-4 text-muted-foreground" />
+                        )}
+                      </button>
+                      <label className="flex h-8 w-8 cursor-pointer items-center justify-center rounded-lg border border-border/60 transition-colors hover:bg-muted/50">
+                        <Trash2 className="h-4 w-4 text-muted-foreground" />
+                        <input type="file" accept="audio/wav,audio/mpeg,audio/mp3,audio/mp4,audio/m4a,audio/x-m4a,audio/webm,audio/ogg"
+                          className="hidden" onChange={(e) => {
+                            const f = e.target.files?.[0] ?? null;
+                            if (f && f.size > 5 * 1024 * 1024) { toast.error("参考音频过大，请控制在 5MB 以内"); setRefFile(null); }
+                            else { setRefFile(f); }
+                          }} />
+                      </label>
+                    </div>
                   </div>
                 ) : (
-                  <div>
-                    <p className="text-xs font-medium">点击上传参考音频</p>
-                    <p className="mt-0.5 text-[11px] text-muted-foreground">上传一段目标声音，复刻同款声线</p>
-                  </div>
+                  <label className="flex cursor-pointer flex-col items-center justify-center gap-2 p-6 text-center transition-colors hover:bg-green-500/5">
+                    <Upload className="h-6 w-6 text-muted-foreground" />
+                    <div>
+                      <p className="text-xs font-medium">点击上传参考音频</p>
+                      <p className="mt-0.5 text-[11px] text-muted-foreground">上传一段目标声音，复刻同款声线</p>
+                    </div>
+                    <input type="file" accept="audio/wav,audio/mpeg,audio/mp3,audio/mp4,audio/m4a,audio/x-m4a,audio/webm,audio/ogg"
+                      className="hidden" onChange={(e) => {
+                        const f = e.target.files?.[0] ?? null;
+                        if (f && f.size > 5 * 1024 * 1024) { toast.error("参考音频过大，请控制在 5MB 以内"); setRefFile(null); }
+                        else { setRefFile(f); }
+                      }} />
+                  </label>
                 )}
-                <input type="file" accept="audio/wav,audio/mpeg,audio/mp3,audio/mp4,audio/m4a,audio/x-m4a,audio/webm,audio/ogg"
-                  className="hidden" onChange={(e) => {
-                    const f = e.target.files?.[0] ?? null;
-                    if (f && f.size > 5 * 1024 * 1024) { toast.error("参考音频过大，请控制在 5MB 以内"); setRefFile(null); }
-                    else { setRefFile(f); }
-                  }} />
-              </label>
+              </div>
               <p className="text-[11px] text-muted-foreground">建议上传 10~30 秒清晰人声，复刻效果更稳。</p>
             </Field>
           )}
 
           <Button onClick={run} disabled={loading}
-            className="w-full bg-gradient-to-r from-rose-500 to-pink-500 text-white hover:opacity-90">
+            className="mt-auto w-full bg-gradient-to-r from-rose-500 to-pink-500 text-white hover:opacity-90">
             {loading ? <><Loader2 className="h-4 w-4 animate-spin" />合成中…</> : <><Volume2 className="h-4 w-4" />立即试听</>}
           </Button>
         </Card>
       }
       result={
         loading ? (
-          <Card className="flex h-[520px] min-h-0 flex-col items-center justify-center gap-4 overflow-hidden p-8 sm:h-[640px]">
+          <Card className="flex h-full min-h-0 flex-col items-center justify-center gap-4 overflow-hidden p-8">
             <div className="flex h-16 w-16 items-center justify-center rounded-full bg-green-500/10">
               <Loader2 className="h-7 w-7 animate-spin text-green-600 dark:text-green-400" />
             </div>
@@ -1430,7 +1586,7 @@ function TtsTool() {
             </div>
           </Card>
         ) : audioUrl ? (
-          <Card className="flex h-[520px] min-h-0 flex-col overflow-hidden sm:h-[640px]">
+          <Card className="flex h-full flex-col overflow-hidden">
             <div className="flex shrink-0 items-center justify-between border-b border-border/60 px-5 py-3">
               <div className="flex items-center gap-2 text-sm font-medium">
                 <Volume2 className="h-4 w-4 text-green-600 dark:text-green-400" />试听结果

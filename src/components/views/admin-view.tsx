@@ -47,7 +47,6 @@ import { useAppStore } from "@/lib/store";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { AuthorizationTab } from "@/components/admin/authorization-tab";
-import { FenggeConfigTab } from "@/components/admin/fengge-config-tab";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -465,7 +464,7 @@ export function AdminView() {
           className="mt-8"
         >
           <Tabs defaultValue="courses" className="w-full">
-            <TabsList className="grid h-auto w-full max-w-2xl grid-cols-6 rounded-xl border border-border/70 bg-card/40 p-0.5">
+            <TabsList className="grid h-auto w-full max-w-2xl grid-cols-5 rounded-xl border border-border/70 bg-card/40 p-0.5">
               <TabsTrigger
                 value="courses"
                 className="gap-1.5 rounded-lg py-1.5 text-xs font-medium data-[state=active]:bg-foreground/10"
@@ -493,13 +492,6 @@ export function AdminView() {
               >
                 <Cpu className="h-3 w-3" />
                 AI 模型
-              </TabsTrigger>
-              <TabsTrigger
-                value="fengge"
-                className="gap-1.5 rounded-lg py-1.5 text-xs font-medium data-[state=active]:bg-foreground/10"
-              >
-                <KeyRound className="h-3 w-3" />
-                风格配置
               </TabsTrigger>
               <TabsTrigger
                 value="authorization"
@@ -671,11 +663,6 @@ export function AdminView() {
             {/* AI 模型配置 Tab */}
             <TabsContent value="ai-models" className="mt-4">
               <AiModelsTab />
-            </TabsContent>
-
-            {/* 风格配置 Tab */}
-            <TabsContent value="fengge" className="mt-4">
-              <FenggeConfigTab />
             </TabsContent>
 
             {/* 授权管理 Tab */}

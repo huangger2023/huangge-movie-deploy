@@ -2,11 +2,14 @@
 
 import * as React from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { CreditCard, MessageCircle, ChevronUp, Users, Check } from "lucide-react";
+import { CreditCard, MessageCircle, ChevronUp, Users } from "lucide-react";
 import { useAppStore } from "@/lib/store";
 import { cn } from "@/lib/utils";
-import { QQ_GROUP } from "@/lib/qq-group";
-import { toast } from "sonner";
+import {
+  Dialog,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import { QQGroupDialogContent } from "@/components/site/qq-group";
 
 function FloatingButton({
   icon,
@@ -47,18 +50,7 @@ function FloatingButton({
 export function FloatingActions() {
   const { setView } = useAppStore();
   const [expanded, setExpanded] = React.useState(false);
-  const [qqCopied, setQqCopied] = React.useState(false);
-
-  const handleCopyQQ = async () => {
-    try {
-      await navigator.clipboard.writeText(QQ_GROUP.number);
-      setQqCopied(true);
-      toast.success("群号已复制", { description: "打开QQ添加群聊" });
-      setTimeout(() => setQqCopied(false), 2000);
-    } catch {
-      toast.error("复制失败");
-    }
-  };
+  const [qqDialogOpen, setQqDialogOpen] = React.useState(false);
 
   return (
     <div className="fixed bottom-6 right-6 z-50 flex flex-col items-end gap-3">
@@ -88,13 +80,18 @@ export function FloatingActions() {
               exit={{ opacity: 0, y: 20, scale: 0.9 }}
               transition={{ duration: 0.25, ease: "easeOut", delay: 0.1 }}
             >
-              <FloatingButton
-                icon={qqCopied ? <Check className="h-3.5 w-3.5 text-white" /> : <Users className="h-3.5 w-3.5 text-white" />}
-                label={qqCopied ? "已复制" : "加 QQ 群"}
-                sublabel="实战答疑交流"
-                gradient="bg-gradient-to-r from-blue-500 via-indigo-500 to-violet-500"
-                onClick={handleCopyQQ}
-              />
+              <Dialog open={qqDialogOpen} onOpenChange={setQqDialogOpen}>
+                <DialogTrigger asChild>
+                  <FloatingButton
+                    icon={<Users className="h-3.5 w-3.5 text-white" />}
+                    label="加 QQ 群"
+                    sublabel="实战答疑交流"
+                    gradient="bg-gradient-to-r from-blue-500 via-indigo-500 to-violet-500"
+                    onClick={() => {}}
+                  />
+                </DialogTrigger>
+                <QQGroupDialogContent />
+              </Dialog>
             </motion.div>
           </>
         )}

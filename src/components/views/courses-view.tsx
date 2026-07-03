@@ -136,28 +136,6 @@ export function CoursesView() {
                 </Chip>
               ))}
             </FilterRow>
-
-            <FilterRow label="搜索">
-              <div className="relative w-full sm:max-w-md">
-                <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                <Input
-                  value={searchInput}
-                  onChange={(e) => setSearchInput(e.target.value)}
-                  placeholder="搜索课程标题、重点、讲师…"
-                  className="rounded-lg border-border/50 pl-9 text-sm"
-                />
-                {searchInput ? (
-                  <button
-                    type="button"
-                    onClick={() => setSearchInput("")}
-                    className="absolute right-2 top-1/2 -translate-y-1/2 rounded-md p-1 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
-                    aria-label="清空搜索"
-                  >
-                    <X className="h-3.5 w-3.5" />
-                  </button>
-                ) : null}
-              </div>
-            </FilterRow>
           </div>
         </motion.div>
 
