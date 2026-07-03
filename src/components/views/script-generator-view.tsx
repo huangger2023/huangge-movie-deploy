@@ -2115,20 +2115,6 @@ function ResultPanel({
           </div>
         )}
 
-        {/* 快捷建议标签 */}
-        <div className="mb-3 flex flex-wrap gap-1.5">
-          {["缩短到500字", "改成幽默风格", "加互动结尾", "语气更犀利"].map((s) => (
-            <button
-              key={s}
-              type="button"
-              onClick={() => { setChatPrompt(s); }}
-              className="rounded-full border border-border/50 bg-muted/30 px-2.5 py-1 text-[11px] text-muted-foreground transition-all hover:border-primary/40 hover:bg-primary/5 hover:text-primary"
-            >
-              {s}
-            </button>
-          ))}
-        </div>
-
         {/* 输入区域 */}
         <div className="relative flex items-end gap-2 rounded-2xl border border-border/60 bg-muted/20 px-3 py-2 transition-all focus-within:border-primary/50 focus-within:bg-primary/[0.02] focus-within:shadow-[0_0_0_2px_rgba(59,130,246,0.08)]">
           <Textarea
