@@ -22,10 +22,13 @@ function createAdapter() {
       authToken: process.env.TURSO_AUTH_TOKEN,
     })
   }
-  // 回退：使用绝对路径连接本地 SQLite 文件
-  // 注意：Prisma 内置引擎和 libSQL 对 file: 路径解析规则不同
-  const dbPath = path.join(process.cwd(), 'db', 'custom.db')
-  return new PrismaLibSQL({ url: `file:${dbPath}` })
+  // 回退：使用 PrismaLibSQL 连接本地 SQLite 文件
+  // Vercel (Unix) 上用绝对路径，Windows 本地用相对路径
+  const isWindows = process.platform === 'win32'
+  const dbUrl = isWindows
+    ? 'file:./db/custom.db'
+    : `file:${path.join(process.cwd(), 'db', 'custom.db')}`
+  return new PrismaLibSQL({ url: dbUrl })
 }
 
 const globalForPrisma = globalThis as unknown as {

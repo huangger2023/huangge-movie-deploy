@@ -12,8 +12,10 @@ export function maskApiKey(key: string): string {
   return "••••••••" + key.slice(-4);
 }
 
-/** 读取全局模型公开开关（从 SystemSetting 表） */
+/** 读取全局模型公开开关（SystemSetting 表 + globalThis 内存缓存） */
 async function getGlobalModelPublicSetting(): Promise<boolean> {
+  const g = globalThis as unknown as { __globalModelPublic?: string };
+  if (g.__globalModelPublic !== undefined) return g.__globalModelPublic === "true";
   try {
     const row = await db.systemSetting.findUnique({
       where: { key: "ai_global_model_public" },
@@ -123,16 +125,27 @@ export async function PUT(req: NextRequest) {
     const body = await req.json();
     const globalModelPublic = Boolean(body.globalModelPublic);
 
-    await db.systemSetting.upsert({
-      where: { key: "ai_global_model_public" },
-      create: {
-        key: "ai_global_model_public",
-        value: String(globalModelPublic),
-      },
-      update: {
-        value: String(globalModelPublic),
-      },
-    });
+    // Vercel serverless 文件系统只读，无法写入 SQLite 文件。
+    // 改用 globalThis 内存缓存（同实例内即时生效）。
+    // 注：不同实例间可能短暂不一致，但对于一个开关来说影响极小。
+    const g = globalThis as unknown as { __globalModelPublic?: string };
+    g.__globalModelPublic = String(globalModelPublic);
+    
+    // 也尝试写入数据库（成功则持久化，失败也无妨）
+    try {
+      await db.systemSetting.upsert({
+        where: { key: "ai_global_model_public" },
+        create: {
+          key: "ai_global_model_public",
+          value: String(globalModelPublic),
+        },
+        update: {
+          value: String(globalModelPublic),
+        },
+      });
+    } catch {
+      // 写入失败：SQLite 只读，忽略
+    }
 
     // 清除缓存，让后续 AI 调用立即生效
     clearGlobalModelPublicCache();

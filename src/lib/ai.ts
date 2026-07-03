@@ -994,7 +994,7 @@ export async function generateNarrationScript(
   console.log(`[ai] incrementalScript first call done, outputLen=${output.length}`);
 
   // 字数纠偏
-  for (let correctionRound = 0; correctionRound < 3; correctionRound += 1) {
+  if (!input.fastMode) for (let correctionRound = 0; correctionRound < 3; correctionRound += 1) {
     const actualChars = output.trim().length;
     if (!shouldCorrectLength(targetWords, actualChars)) break;
     const deviation = Math.abs(actualChars - targetWords) / targetWords;
@@ -1021,6 +1021,7 @@ export async function generateNarrationScript(
     console.log(`[ai] incrementalScript correction ${correctionRound + 1} done, outputLen=${output.length}`);
   }
 
+  if (input.fastMode) return output.trim();
   return humanizeCopy(output.trim(), "script", ctx, input.model, configBaseUrl, configApiKey);
 }
 

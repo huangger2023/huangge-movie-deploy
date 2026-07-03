@@ -23,8 +23,7 @@ export const maxDuration = 60;
  *   subtitleSource?: string, // 字幕来源说明
  *   fullText: string,        // 优先字幕，无字幕则用描述
  *   cueCount: number,
- *   needsASR?: boolean,       // 无字幕时为 true，前端可走讯飞ASR
- *   videoUrl?: string         // 无水印视频下载URL（供前端ASR使用）
+ *   videoUrl?: string         // 无水印视频下载URL
  * }
  */
 export async function POST(req: NextRequest) {
@@ -73,7 +72,7 @@ export async function POST(req: NextRequest) {
       });
     }
 
-    // 无字幕：返回视频 URL，前端可通过讯飞 ASR 识别
+    // 无字幕：返回视频 URL
     return NextResponse.json({
       videoId: info.videoId,
       title: info.title,
@@ -82,7 +81,6 @@ export async function POST(req: NextRequest) {
       duration: info.duration,
       fullText: info.desc || "",
       cueCount: 0,
-      needsASR: true,
       videoUrl: info.videoUrl || undefined,
     });
   } catch (e) {

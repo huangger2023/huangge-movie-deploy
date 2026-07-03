@@ -17,7 +17,6 @@ export interface FenggeRecorderState {
 
 /**
  * 麦克风录音 hook：getUserMedia + MediaRecorder → webm Blob。
- * 返回的 Blob 可直接喂给 xfyun-asr 的 recognizeAudio（已支持任意音频解码为 16k PCM）。
  *
  * 用法：
  *   const rec = useFenggeRecorder();

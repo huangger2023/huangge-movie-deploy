@@ -7,7 +7,6 @@ export const maxDuration = 60;
  * GET /api/ai/audio-proxy?url=...
  *
  * 代理下载音频/视频文件，解决前端跨域问题。
- * 用于前端讯飞 ASR 流程：前端通过此代理下载抖音无水印视频。
  */
 export async function GET(req: NextRequest) {
   const url = req.nextUrl.searchParams.get("url");

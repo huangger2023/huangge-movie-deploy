@@ -403,7 +403,6 @@ export function ScriptGeneratorView() {
         plotContext,
         configId: selectedModel?.configId || undefined,
         modelName: selectedModel?.modelName || undefined,
-        // 剧情增量参数
         entryPoint: form.entryPoint.trim() || undefined,
         uniqueAngle: form.uniqueAngle.trim() || undefined,
       }),
@@ -412,6 +411,44 @@ export function ScriptGeneratorView() {
       const err = await res.json().catch(() => ({}));
       throw new Error(err.error || "生成失败");
     }
+    // 处理 SSE 流式响应（防止 Vercel 504 超时）
+    const contentType = res.headers.get("content-type") || "";
+    if (contentType.includes("text/event-stream")) {
+      return new Promise<{ output: string; savedId: string | null }>((resolve, reject) => {
+        const reader = res.body?.getReader();
+        if (!reader) { reject(new Error("无法读取流")); return; }
+        const decoder = new TextDecoder();
+        let buffer = "";
+        (async () => {
+          while (true) {
+            const { done, value } = await reader.read();
+            if (done) break;
+            buffer += decoder.decode(value, { stream: true });
+            const events = buffer.split("\n\n");
+            buffer = events.pop() || "";
+            for (const evtStr of events) {
+              if (!evtStr.trim()) continue;
+              let eventType = "message", dataStr = "";
+              for (const line of evtStr.split("\n")) {
+                if (line.startsWith("event: ")) eventType = line.slice(7).trim();
+                else if (line.startsWith("data: ")) dataStr += line.slice(6);
+              }
+              if (!dataStr) continue;
+              try {
+                const data = JSON.parse(dataStr);
+                if (eventType === "done") {
+                  resolve({ output: data.output, savedId: data.savedId ?? null });
+                  return;
+                }
+                if (eventType === "error") { reject(new Error(data.message)); return; }
+              } catch {}
+            }
+          }
+          reject(new Error("流结束但未收到结果"));
+        })();
+      });
+    }
+    // 兼容旧版非流式响应
     return (await res.json()) as { output: string; savedId: string | null };
   };
 
