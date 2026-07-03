@@ -2120,7 +2120,7 @@ function ResultPanel({
           <Textarea
             value={chatPrompt}
             onChange={(e) => setChatPrompt(e.target.value)}
-            placeholder="输入调整要求，例如：缩短到500字..."
+            placeholder="输入调整要求..."
             className="min-h-[24px] max-h-[100px] resize-none border-0 bg-transparent p-0 text-xs text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:ring-0 shadow-none"
             rows={1}
             onKeyDown={(e) => {
