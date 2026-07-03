@@ -6,6 +6,12 @@ const nextConfig: NextConfig = {
     ignoreBuildErrors: true,
   },
   reactStrictMode: false,
+  serverExternalPackages: ["@libsql/client"],
+  experimental: {
+    outputFileTracingIncludes: {
+      "/api/**/*": ["./db/**/*"],
+    },
+  },
 };
 
 export default nextConfig;
