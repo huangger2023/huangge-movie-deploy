@@ -37,6 +37,7 @@ import {
   FolderKanban,
   RotateCcw,
   PenLine,
+  MessageSquare,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -1901,8 +1902,35 @@ function ResultPanel({
 	  onSetAdjustingText,
 	  onSetAdjustPrompt,
 	  onSetSelectionPopup,
-	}: ResultPanelProps) {
-	  const isUnverified = result.includes("剧情未经校验");
+		}: ResultPanelProps) {
+  const isUnverified = result.includes("剧情未经校验");
+  const [chatPrompt, setChatPrompt] = React.useState("");
+  const [chatLoading, setChatLoading] = React.useState(false);
+  const [chatResult, setChatResult] = React.useState<string | null>(null);
+
+  const handleChatAdjust = async () => {
+    if (!chatPrompt.trim() || chatLoading) return;
+    setChatLoading(true);
+    try {
+      const res = await fetch("/api/ai/adjust-text", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          originalText: chatResult || result,
+          prompt: chatPrompt.trim(),
+          fullText: chatResult || result,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "调整失败");
+      setChatResult(data.output);
+      setChatPrompt("");
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "调整失败");
+    } finally {
+      setChatLoading(false);
+    }
+  };
   return (
     <div className="flex h-full flex-col overflow-hidden">
       {/* 统一的头部 */}
@@ -2060,6 +2088,55 @@ function ResultPanel({
           </Card>
         </div>
       )}
+
+      {/* AI 对话调整个文案 */}
+      <div className="shrink-0 border-t border-border/60 pt-3 mt-3">
+        <div className="flex items-center gap-2 mb-2">
+          <div className="flex h-6 w-6 items-center justify-center rounded-md bg-primary/10 text-primary">
+            <MessageSquare className="h-3.5 w-3.5" />
+          </div>
+          <span className="text-xs font-medium text-foreground/80">AI 调整文案</span>
+          {chatResult && (
+            <Button
+              size="sm"
+              variant="ghost"
+              className="ml-auto h-6 gap-1 px-2 text-[11px]"
+              onClick={() => { setChatResult(null); setChatPrompt(""); }}
+            >
+              <RotateCcw className="h-3 w-3" />
+              撤销
+            </Button>
+          )}
+        </div>
+        {chatResult ? (
+          <div className="rounded-lg border border-primary/20 bg-primary/5 p-3 text-xs leading-relaxed">
+            {chatResult}
+          </div>
+        ) : null}
+        <div className="flex items-end gap-2 mt-2">
+          <Textarea
+            value={chatPrompt}
+            onChange={(e) => setChatPrompt(e.target.value)}
+            placeholder="例如：字数太多了减到500字左右、语气改成幽默风格、加一个互动结尾..."
+            className="min-h-[36px] max-h-[80px] resize-none text-xs flex-1 border-border/60 bg-muted/30 focus:border-primary"
+            rows={1}
+            onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); handleChatAdjust(); } }}
+          />
+          <Button
+            size="sm"
+            onClick={handleChatAdjust}
+            disabled={chatLoading || !chatPrompt.trim()}
+            className="h-9 shrink-0 gap-1 bg-gradient-to-r from-primary to-accent text-primary-foreground"
+          >
+            {chatLoading ? (
+              <Loader2 className="h-3.5 w-3.5 animate-spin" />
+            ) : (
+              <Sparkles className="h-3.5 w-3.5" />
+            )}
+            调整
+          </Button>
+        </div>
+      </div>
     </div>
   );
 }
