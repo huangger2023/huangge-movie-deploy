@@ -1,5 +1,6 @@
 import { PrismaClient } from '@prisma/client'
 import { PrismaLibSQL } from '@prisma/adapter-libsql'
+import path from 'path'
 
 /**
  * 数据库接入层：生产用 Turso(libSQL) 远程数据库，本地开发可用 SQLite 文件。
@@ -10,30 +11,32 @@ import { PrismaLibSQL } from '@prisma/adapter-libsql'
  *
  * 环境变量：
  * - 生产：TURSO_DATABASE_URL（libsql://xxx.turso.io）+ TURSO_AUTH_TOKEN
- * - 回退：使用 Prisma 内置 SQLite 引擎连接本地 SQLite 文件
+ * - 回退：使用 PrismaLibSQL 连接本地 SQLite 文件（libSQL 兼容 SQLite 文件）
  */
-function getPrismaClient() {
+function createAdapter() {
   const tursoUrl = process.env.TURSO_DATABASE_URL
   if (tursoUrl && tursoUrl !== 'undefined') {
     // 生产：Turso 远程库
-    return new PrismaClient({
-      log: ['error', 'warn'],
-      adapter: new PrismaLibSQL({
-        url: tursoUrl,
-        authToken: process.env.TURSO_AUTH_TOKEN,
-      }),
+    return new PrismaLibSQL({
+      url: tursoUrl,
+      authToken: process.env.TURSO_AUTH_TOKEN,
     })
   }
-  // 回退：使用 Prisma 内置 SQLite 引擎（本地开发 / Vercel 只读场景）
-  return new PrismaClient({
-    log: ['error', 'warn'],
-  })
+  // 回退：使用绝对路径连接本地 SQLite 文件
+  // 注意：Prisma 内置引擎和 libSQL 对 file: 路径解析规则不同
+  const dbPath = path.join(process.cwd(), 'db', 'custom.db')
+  return new PrismaLibSQL({ url: `file:${dbPath}` })
 }
 
 const globalForPrisma = globalThis as unknown as {
   prisma: PrismaClient | undefined
 }
 
-export const db = globalForPrisma.prisma ?? getPrismaClient()
+export const db =
+  globalForPrisma.prisma ??
+  new PrismaClient({
+    log: ['error', 'warn'],
+    adapter: createAdapter(),
+  })
 
 if (process.env.NODE_ENV !== 'production') globalForPrisma.prisma = db
