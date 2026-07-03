@@ -2089,52 +2089,76 @@ function ResultPanel({
         </div>
       )}
 
-      {/* AI 对话调整个文案 */}
-      <div className="shrink-0 border-t border-border/60 pt-3 mt-3">
-        <div className="flex items-center gap-2 mb-2">
-          <div className="flex h-6 w-6 items-center justify-center rounded-md bg-primary/10 text-primary">
-            <MessageSquare className="h-3.5 w-3.5" />
+      {/* AI 对话调整个文案 - 类 ChatGPT 风格 */}
+      <div className="shrink-0 border-t border-border/40 pt-4 mt-2">
+        {/* 对话历史 */}
+        {chatResult && (
+          <div className="mb-3 space-y-3">
+            {/* 用户消息 */}
+            <div className="flex gap-2.5">
+              <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-muted text-[10px] font-bold text-muted-foreground">
+                U
+              </div>
+              <div className="rounded-2xl rounded-tl-sm bg-muted/70 px-3.5 py-2 text-xs leading-relaxed text-foreground/90 max-w-[85%]">
+                {chatPrompt || "调整文案"}
+              </div>
+            </div>
+            {/* AI 回复 */}
+            <div className="flex gap-2.5">
+              <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-primary/15 text-primary">
+                <Sparkles className="h-3.5 w-3.5" />
+              </div>
+              <div className="rounded-2xl rounded-tl-sm border border-border/50 bg-card px-3.5 py-2 text-xs leading-relaxed text-foreground/90 max-w-[85%] whitespace-pre-wrap">
+                {chatResult}
+              </div>
+            </div>
           </div>
-          <span className="text-xs font-medium text-foreground/80">AI 调整文案</span>
-          {chatResult && (
-            <Button
-              size="sm"
-              variant="ghost"
-              className="ml-auto h-6 gap-1 px-2 text-[11px]"
-              onClick={() => { setChatResult(null); setChatPrompt(""); }}
+        )}
+
+        {/* 快捷建议标签 */}
+        <div className="mb-3 flex flex-wrap gap-1.5">
+          {["缩短到500字", "改成幽默风格", "加互动结尾", "语气更犀利"].map((s) => (
+            <button
+              key={s}
+              type="button"
+              onClick={() => { setChatPrompt(s); }}
+              className="rounded-full border border-border/50 bg-muted/30 px-2.5 py-1 text-[11px] text-muted-foreground transition-all hover:border-primary/40 hover:bg-primary/5 hover:text-primary"
             >
-              <RotateCcw className="h-3 w-3" />
-              撤销
-            </Button>
-          )}
+              {s}
+            </button>
+          ))}
         </div>
-        {chatResult ? (
-          <div className="rounded-lg border border-primary/20 bg-primary/5 p-3 text-xs leading-relaxed">
-            {chatResult}
-          </div>
-        ) : null}
-        <div className="flex items-end gap-2 mt-2">
+
+        {/* 输入区域 */}
+        <div className="relative flex items-end gap-2 rounded-2xl border border-border/60 bg-muted/20 px-3 py-2 transition-all focus-within:border-primary/50 focus-within:bg-primary/[0.02] focus-within:shadow-[0_0_0_2px_rgba(59,130,246,0.08)]">
           <Textarea
             value={chatPrompt}
             onChange={(e) => setChatPrompt(e.target.value)}
-            placeholder="例如：字数太多了减到500字左右、语气改成幽默风格、加一个互动结尾..."
-            className="min-h-[36px] max-h-[80px] resize-none text-xs flex-1 border-border/60 bg-muted/30 focus:border-primary"
+            placeholder="输入调整要求，例如：缩短到500字..."
+            className="min-h-[24px] max-h-[100px] resize-none border-0 bg-transparent p-0 text-xs text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:ring-0 shadow-none"
             rows={1}
-            onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); handleChatAdjust(); } }}
+            onKeyDown={(e) => {
+              if (e.key === "Enter" && !e.shiftKey) {
+                e.preventDefault();
+                handleChatAdjust();
+              }
+            }}
           />
-          <Button
-            size="sm"
+          <button
+            type="button"
             onClick={handleChatAdjust}
             disabled={chatLoading || !chatPrompt.trim()}
-            className="h-9 shrink-0 gap-1 bg-gradient-to-r from-primary to-accent text-primary-foreground"
+            className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-primary text-primary-foreground transition-all hover:bg-primary/90 disabled:opacity-40 disabled:cursor-not-allowed"
           >
             {chatLoading ? (
               <Loader2 className="h-3.5 w-3.5 animate-spin" />
             ) : (
-              <Sparkles className="h-3.5 w-3.5" />
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M22 2L11 13" />
+                <path d="M22 2L15 22L11 13L2 9L22 2Z" />
+              </svg>
             )}
-            调整
-          </Button>
+          </button>
         </div>
       </div>
     </div>
