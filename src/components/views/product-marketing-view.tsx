@@ -48,6 +48,8 @@ type ProductCard = {
   items?: string[];
   action?: ProductAction;
   featured?: boolean;
+  image?: string;      // 展示图片（如支付二维码）
+  imageAlt?: string;   // 图片替代文本
 };
 
 type ProductPage = {
@@ -337,8 +339,20 @@ const pages: Record<ProductKey, ProductPage> = {
         kicker: "支付方式",
         title: "联系客服完成支付",
         cards: [
-          { title: "微信支付", body: "联系客服微信，确认学员身份后支付。", action: { label: "联系客服", view: "contact" } },
-          { title: "支付宝", body: "联系客服支付宝，确认学员身份后支付。", action: { label: "联系客服", view: "contact" } },
+          {
+            title: "微信支付",
+            image: "/wechat-pay.jpg",
+            imageAlt: "微信支付二维码",
+            body: "长按或扫描二维码添加客服微信，确认学员身份后完成支付。",
+            action: { label: "联系客服", view: "contact" },
+          },
+          {
+            title: "支付宝",
+            image: "/alipay.jpg",
+            imageAlt: "支付宝支付二维码",
+            body: "长按或扫描二维码添加客服支付宝，确认学员身份后完成支付。",
+            action: { label: "联系客服", view: "contact" },
+          },
         ],
       },
     ],
@@ -481,6 +495,15 @@ export function ProductMarketingView({ pageKey }: { pageKey: ProductKey }) {
                         card.featured && "border-green-500/30 ring-1 ring-green-500/20"
                       )}
                     >
+                      {card.image && (
+                        <div className="mb-4 flex justify-center">
+                          <img
+                            src={card.image}
+                            alt={card.imageAlt || card.title}
+                            className="h-48 w-48 rounded-lg object-contain"
+                          />
+                        </div>
+                      )}
                       {card.tag && (
                         <span className="mb-2 inline-block rounded-full bg-amber-500/15 px-2.5 py-0.5 text-[11px] font-medium text-amber-600 dark:text-amber-400">
                           {card.tag}

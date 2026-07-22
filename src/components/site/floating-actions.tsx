@@ -10,6 +10,7 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { QQGroupDialogContent } from "@/components/site/qq-group";
+import { PaymentDialogContent } from "@/components/site/payment-dialog";
 
 function FloatingButton({
   icon,
@@ -51,26 +52,32 @@ export function FloatingActions() {
   const { setView } = useAppStore();
   const [expanded, setExpanded] = React.useState(false);
   const [qqDialogOpen, setQqDialogOpen] = React.useState(false);
+  const [paymentDialogOpen, setPaymentDialogOpen] = React.useState(false);
 
   return (
     <div className="fixed bottom-6 right-6 z-50 flex flex-col items-end gap-3">
       <AnimatePresence>
         {expanded && (
           <>
-            {/* 充值通道 */}
+            {/* 支付通道 */}
             <motion.div
               initial={{ opacity: 0, y: 20, scale: 0.9 }}
               animate={{ opacity: 1, y: 0, scale: 1 }}
               exit={{ opacity: 0, y: 20, scale: 0.9 }}
               transition={{ duration: 0.25, ease: "easeOut" }}
             >
-              <FloatingButton
-                icon={<CreditCard className="h-3.5 w-3.5 text-white" />}
-                label="充值通道"
-                sublabel="学员专属价格"
-                gradient="bg-gradient-to-r from-amber-500 via-orange-500 to-red-500"
-                onClick={() => setView("payment")}
-              />
+              <Dialog open={paymentDialogOpen} onOpenChange={setPaymentDialogOpen}>
+                <DialogTrigger asChild>
+                  <FloatingButton
+                    icon={<CreditCard className="h-3.5 w-3.5 text-white" />}
+                    label="支付通道"
+                    sublabel="学员专属价格"
+                    gradient="bg-gradient-to-r from-amber-500 via-orange-500 to-red-500"
+                    onClick={() => {}}
+                  />
+                </DialogTrigger>
+                <PaymentDialogContent />
+              </Dialog>
             </motion.div>
 
             {/* 加 QQ 群 */}
